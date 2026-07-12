@@ -14,13 +14,30 @@ from collections.abc import Callable
 
 from app import config
 from app.adapters import sarvam_translate, sarvam_tts
-from app.agents import humanizer
+from app.agents import humanizer, localizer
 from app.artifacts import Cast, DeliveryPlan, Episode, Script
 from app.stages import delivery as delivery_stage
 
 
 def _voice(cast: Cast, speaker: str) -> str:
     return cast.expert.voice if speaker == "expert" else cast.host.voice
+
+
+def _translated_delivery(client, turn, lang: str, run, settings=None) -> tuple[str, float]:
+    translated = sarvam_translate.translate(client, turn.text, lang, run)
+    return humanizer.humanize_lang(client, translated, lang, run, settings)
+
+
+def _localized_delivery(client, script: Script, i: int, cast: Cast, lang: str, run,
+                        settings=None) -> tuple[str, float]:
+    turn = script.turns[i]
+    try:
+        prior = script.turns[max(0, i - 2):i]
+        return localizer.localize_turn(client, turn, prior, lang, cast, run, settings)
+    except Exception as e:  # noqa: BLE001 - localization is best-effort; fall back to Mayura path
+        run.log(stage="localize", kind="fallback", target=lang, turn_idx=turn.idx,
+                error=str(e)[:200])
+        return _translated_delivery(client, turn, lang, run, settings)
 
 
 def run(client, script: Script, cast: Cast, run, languages: list[str], settings=None,
@@ -36,9 +53,10 @@ def run(client, script: Script, cast: Cast, run, languages: list[str], settings=
             turn = script.turns[i]
             if lang == "en-IN":
                 delivery, pace = (turn.spoken or turn.text), turn.pace  # precomputed English
+            elif config.LOCALIZATION_MODE == "llm":
+                delivery, pace = _localized_delivery(client, script, i, cast, lang, run, settings)
             else:
-                translated = sarvam_translate.translate(client, turn.text, lang, run)
-                delivery, pace = humanizer.humanize_lang(client, translated, lang, run, settings)  # native fillers
+                delivery, pace = _translated_delivery(client, turn, lang, run, settings)
             turn_delivery = delivery_stage.plan_turn_delivery(turn, delivery, pace)
             rendered_phrases = []
             for phrase in turn_delivery.phrases:

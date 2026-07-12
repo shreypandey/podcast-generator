@@ -422,18 +422,25 @@ Design decision:
 Naturalness should not mutate the verified canonical script. Audio can use `spoken`; source
 explorer and verification use `text`.
 
-### 5.10 Translator / Per-Language Render
+### 5.10 Localization / Per-Language Render
 
-Location: `backend/app/adapters/sarvam_translate.py`, `backend/app/stages/render.py`
+Location: `backend/app/adapters/sarvam_translate.py`, `backend/app/agents/localizer.py`,
+`backend/app/stages/render.py`
 
-The English script is the pivot. Non-English episodes translate from canonical English, then
-run language-specific humanization before delivery planning and TTS.
+The English script is the pivot. Non-English episodes are produced from canonical English through
+one of two paths before delivery planning and TTS.
 
 Design decisions:
 
-- English bypasses translation.
-- Non-English translation uses Mayura with modern-colloquial style.
-- Native-script guard prevents Hindi/Tamil drifting into romanized text.
+- English bypasses localization.
+- `LOCALIZATION_MODE=translate` uses Mayura with modern-colloquial style, then the per-language
+  humanizer.
+- `LOCALIZATION_MODE=llm` uses Sarvam-105B to generate native podcast speech directly from the
+  canonical English turn.
+- The LLM path keeps per-turn work parallel by passing recent English context plus the final
+  English turn to localize.
+- Native-script guards prevent Hindi/Tamil and other target languages drifting into romanized text.
+- The LLM path falls back to Mayura+humanizer if output is empty or unsafe.
 - Per-language meaning check is designed but deferred.
 - Bulbul voices are reused cross-language.
 
@@ -795,8 +802,8 @@ sources, but the Expert still cannot invent a myth or cite unsupported claims.
 Render stage:
 
 - takes canonical script
-- translates non-English turns
-- humanizes per language
+- localizes or translates non-English turns
+- humanizes per language when using the translate path
 - plans phrase-level delivery
 - runs TTS per phrase with per-phrase pace
 - assembles WAVs with phrase/turn/outro pauses

@@ -30,6 +30,7 @@ Runtime env vars:
 - `HUMANIZE_MAX_WORKERS` defaults to `10`
 - `REVIEW_MAX_WORKERS` defaults to `3`
 - `RENDER_MAX_WORKERS` defaults to `4`
+- `LOCALIZATION_MODE` defaults to `translate`; set to `llm` to use Sarvam-105B native podcast localization for non-English turns
 - `PHRASE_RENDER_MAX_WORKERS` defaults to `2`
 - `TTS_RETRY_TRIES` defaults to `5`
 - `PHRASE_MAX_CHARS` defaults to `155`
@@ -90,6 +91,18 @@ Sarvam Bulbul exposes pace per TTS request, not per word. Phrase pacing therefor
 small TTS requests per turn and assembles a phrase timeline. `PHRASE_RENDER_MAX_WORKERS` and
 `TTS_RETRY_TRIES` are intentionally separate from the general render worker count because phrase
 rendering increases request volume and can hit rate limits.
+
+## Localization Modes
+
+Non-English rendering has two paths:
+
+- `LOCALIZATION_MODE=translate`: Mayura translates the canonical English turn, then the
+  per-language humanizer adds spoken delivery. This is the compatibility/default path.
+- `LOCALIZATION_MODE=llm`: Sarvam-105B localizes the canonical English turn directly into native
+  podcast speech, preserving facts while avoiding literal English idioms and code-mixed filler.
+  Mayura+humanizer remains the fallback if the LLM output is empty or not mostly native script.
+  Each turn is localized independently, with recent English turns supplied as context, so render
+  can keep per-turn localization and phrase-level TTS work parallel.
 
 ## Tests
 

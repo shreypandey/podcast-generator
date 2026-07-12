@@ -97,6 +97,81 @@ class PhraseRenderTests(unittest.TestCase):
             self.assertEqual(len(episodes[0].delivery_plan), 2)
             self.assertGreater(len(calls), len(script.turns))
 
+    def test_render_can_use_llm_localization_for_non_english(self):
+        script = Script(turns=[
+            Turn(idx=0, speaker="host", text="What is an mRNA vaccine?", move="ask", pace=1.0),
+        ])
+        cast = Cast(
+            host=Persona(role="host", name="Host", background="host", voice="aditya"),
+            expert=Persona(role="expert", name="Expert", background="expert", voice="shubh"),
+        )
+
+        def fake_synth(_client, text, speaker, _run, pace=None, lang=None):
+            self.assertIn("वैक्सीन", text)
+            self.assertEqual(lang, "hi-IN")
+            return ["audio"]
+
+        def fake_combine(_timeline, out_path):
+            with open(out_path, "wb") as f:
+                f.write(b"wav")
+            return out_path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            run = DummyRun(tmp)
+            with patch("app.config.LOCALIZATION_MODE", "llm"), \
+                    patch("app.agents.localizer.localize_turn",
+                          return_value=("एम-आर-एन-ए वैक्सीन क्या होती है?", 0.95)) as localize, \
+                    patch("app.adapters.sarvam_translate.translate") as translate, \
+                    patch("app.adapters.sarvam_tts.synth", side_effect=fake_synth), \
+                    patch("app.adapters.sarvam_tts.combine_phrase_timeline_to_wav",
+                          side_effect=fake_combine):
+                episodes = render.run(object(), script, cast, run, ["hi-IN"])
+
+            localize.assert_called_once()
+            translate.assert_not_called()
+            self.assertEqual(episodes[0].deliveries, ["एम-आर-एन-ए वैक्सीन क्या होती है?"])
+
+    def test_llm_localization_receives_previous_english_turn(self):
+        script = Script(turns=[
+            Turn(idx=0, speaker="host", text="What is an mRNA vaccine?", move="ask", pace=1.0),
+            Turn(idx=1, speaker="expert", text="It gives cells instructions.", move="answer", pace=1.0),
+        ])
+        cast = Cast(
+            host=Persona(role="host", name="Host", background="host", voice="aditya"),
+            expert=Persona(role="expert", name="Expert", background="expert", voice="shubh"),
+        )
+
+        def fake_localize(_client, target, prior, _lang, _cast, _run, _settings=None):
+            if target.idx == 0:
+                self.assertEqual(prior, [])
+                return "एम-आर-एन-ए वैक्सीन क्या होती है?", 0.95
+            self.assertEqual(prior[-1].text, "What is an mRNA vaccine?")
+            return "यह कोशिकाओं को निर्देश देती है।", 0.94
+
+        def fake_synth(_client, _text, _speaker, _run, pace=None, lang=None):
+            return ["audio"]
+
+        def fake_combine(_timeline, out_path):
+            with open(out_path, "wb") as f:
+                f.write(b"wav")
+            return out_path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            run = DummyRun(tmp)
+            with patch("app.config.LOCALIZATION_MODE", "llm"), \
+                    patch("app.agents.localizer.localize_turn",
+                          side_effect=fake_localize) as localize, \
+                    patch("app.adapters.sarvam_tts.synth", side_effect=fake_synth), \
+                    patch("app.adapters.sarvam_tts.combine_phrase_timeline_to_wav",
+                          side_effect=fake_combine):
+                episodes = render.run(object(), script, cast, run, ["hi-IN"])
+
+            self.assertEqual(localize.call_count, 2)
+            self.assertEqual(episodes[0].deliveries, [
+                "एम-आर-एन-ए वैक्सीन क्या होती है?",
+                "यह कोशिकाओं को निर्देश देती है।",
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()

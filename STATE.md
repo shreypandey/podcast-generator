@@ -25,7 +25,7 @@ spoken claim traceable to a source. Fixed stack: **Exa** (research), **Sarvam-10
 | M2a verify + citations | ✅ | per-Expert-turn grounding gate + bounded repair; `transcript.md` + `Episode.sources`; grounding-rate metric |
 | M2b tension + challenge | ✅ | `annotate_tension`; evidence-driven `challenge` (budget-rationed) |
 | M3 steering + editor | ✅ | `--length`/`--depth`, **angle/focus**, and **tone/style** per-run `Settings`; query-planner angle hints; **parallel reviewer-panel editor** (continuity/consistency/liveliness) + `next_beat` coherence/bridge nudge |
-| M4 render pipeline | 🔨 | **v1 + M4.1 ✅ (confirmed en/hi/ta)** Mayura translate (English bypass) → **per-language humanizer** (native fillers + native-script guard) → parallel per-turn TTS → `episode_<lang>.wav` + `transcript_<lang>.md` (citations). `--langs`. **Pending:** meaning-check subagent, timeline mixer (Lever D) |
+| M4 render pipeline | 🔨 | **v1 + M4.1 ✅ (confirmed en/hi/ta)** English bypass; non-English can use Mayura translate → per-language humanizer or Sarvam-105B native localization (`LOCALIZATION_MODE=llm`) → phrase-paced TTS → `episode_<lang>.wav` + `transcript_<lang>.md`. **Pending:** meaning-check subagent, timeline mixer (Lever D) |
 | M5 frontend | ⬜ | UI, live progress, player, source explorer |
 | M6 "Join" (interactive) | ⬜ | **deferred to the very end**; live STT loop |
 
@@ -192,11 +192,13 @@ Every run writes typed artifacts + `manifest.json` (all prompts/responses/latenc
    to M5.
 3. **Steering knobs** — ✅ shipped: angle/focus, tone/style, custom angle/style; M5 still needs
    the UI controls.
-4. **M4 render pipeline** — uniform per-language flow: **translate → meaning-check → humanize →
-   TTS → timeline mixer**. Translate has an **English bypass** (target `en-IN` → return input
-   unchanged), so English is just the identity case and needs no special path. The **humanizer
-   always sits after translate** (fillers/spoken-form are language-specific). Bulbul TTS per
-   language (11 langs, per-language voice pools **excluding `rahul`**). Turns the canonical
+4. **M4 render pipeline** — uniform per-language flow: **localize/translate → meaning-check →
+   humanize/delivery → phrase-paced TTS → timeline mixer**. English has an identity bypass. For
+   non-English, `LOCALIZATION_MODE=translate` uses Mayura then the per-language humanizer;
+   `LOCALIZATION_MODE=llm` uses Sarvam-105B to generate native podcast speech directly from the
+   canonical English turn, with recent English turns supplied as context so per-turn work can stay
+   parallel. Mayura+humanizer remains the fallback if output is unsafe. Bulbul TTS per language
+   (11 langs, per-language voice pools **excluding `rahul`**). Turns the canonical
    English `VerifiedScript` into many-language episodes.
    - **Humanizer** = post-generation, parallel per-turn over a **3-turn window (humanize only
      the last, backward context)**, writes `turn.spoken` (clean `turn.text` stays canonical for
@@ -254,6 +256,8 @@ grounding rate 50–80% is a decided limitation, not pending work.
 - TTS/naturalness: `TTS_PACE=1.0` default; humanizer emits a per-turn `pace` in 0.9–1.15.
   Render builds phrase delivery plans with `PHRASE_MAX_CHARS`, `PHRASE_*_MS`, speaker/outro turn
   gaps, and `PHRASE_RENDER_MAX_WORKERS=2`; acronym map in `humanizer._ACRONYMS`.
+- Localization: `LOCALIZATION_MODE=translate` (default Mayura+humanizer) or `llm`
+  (Sarvam-105B native podcast localization with Mayura fallback).
 - Steering (`resolve_settings`): body-turn budgets {short:8, medium:18, long:28}; depth 1–5 →
   queries {2,3,4,5,5}, grounding sources {4,6,8,10,12}, facts {8,12,16,22,28};
   segments 3/4 by length, turns/segment = ceil(total/segs), plus minimum segment dwell. Presets: angle
