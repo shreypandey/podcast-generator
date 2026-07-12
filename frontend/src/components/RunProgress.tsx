@@ -7,7 +7,7 @@ const STAGE_ORDER: Stage[] = [
 ];
 
 // User-facing phases. The many internal stages collapse into four steps a listener
-// actually cares about. Within-phase granularity is shown by the progress bar, not the feed.
+// actually cares about.
 const GROUPS: { label: string; detail: string; stages: Stage[] }[] = [
   { label: "Collecting sources", detail: "Searching the web with Exa", stages: ["query_plan", "research"] },
   { label: "Extracting facts", detail: "Pulling out claims, each cited to a source", stages: ["ground", "annotate"] },
@@ -41,7 +41,6 @@ export function RunProgress({ detail }: { detail: RunDetail }) {
           const first = idx(g.stages[0]);
           const last = idx(g.stages[g.stages.length - 1]);
           const state = done || cur > last ? "done" : cur >= first ? "active" : "pending";
-          const showBar = state === "active" && detail.progress;
           return (
             <div key={g.label} className={`tl-step ${state}`}>
               <div className="tl-rail">
@@ -53,16 +52,6 @@ export function RunProgress({ detail }: { detail: RunDetail }) {
               <div className="tl-body">
                 <div className="tl-name">{g.label}</div>
                 <div className="tl-detail">{g.detail}</div>
-                {showBar && detail.progress && (
-                  <div className="meter" style={{ maxWidth: 220 }}>
-                    <span
-                      style={{
-                        width: `${Math.round((detail.progress.current / Math.max(1, detail.progress.total)) * 100)}%`,
-                        background: "linear-gradient(90deg, var(--accent), #b06dfc)",
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             </div>
           );

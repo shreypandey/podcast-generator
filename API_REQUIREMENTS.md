@@ -83,6 +83,7 @@ All timestamps are ISO 8601 strings.
 The API is language-aware from the first frontend contract.
 
 - `POST /api/runs` accepts `languages`.
+- `POST /api/runs/{run_id}/languages` requests additional language renders for an existing run.
 - `GET /api/runs/{run_id}` reports requested, ready, and primary languages.
 - Audio and transcript endpoints accept `?lang=...`.
 - Default language is `en-IN`.
@@ -172,6 +173,39 @@ Response `202`:
   "events_url": "/api/runs/20260712-153441/events"
 }
 ```
+
+### `POST /api/runs/{run_id}/languages`
+
+Request additional languages for an existing run without rerunning research, planning, or
+dialogue. The backend reuses the saved script, cast, facts, and sources, then renders only the
+missing language artifacts.
+
+Request:
+
+```json
+{
+  "languages": ["hi-IN"]
+}
+```
+
+Response `202`:
+
+```json
+{
+  "run_id": "20260712-153441",
+  "status": "queued",
+  "languages": {
+    "requested": ["en-IN", "hi-IN"],
+    "ready": ["en-IN"],
+    "primary": "en-IN"
+  },
+  "queued_languages": ["hi-IN"]
+}
+```
+
+Return `400` for unsupported language codes and `409` if the base run artifacts needed for
+language rendering are not ready. If all requested languages are already ready, return the
+current language state without enqueueing duplicate work.
 
 ### `GET /api/runs`
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api";
+import { api, ApiErr } from "../api";
 import type { SourceItem, TranscriptResponse } from "../api";
+import { LANGUAGES, lang as langMeta } from "../api/languages";
 import { AudioPlayer } from "../components/AudioPlayer";
 import { CastRow, StatusBadge } from "../components/common";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
@@ -13,21 +14,52 @@ import { fmtRelative } from "../lib/format";
 
 export function RunPage() {
   const { runId } = useParams<{ runId: string }>();
-  const { detail, error } = useRunWatch(runId);
+  const { detail, error, refresh } = useRunWatch(runId);
 
   const [activeLang, setActiveLang] = useState("");
+  const [selectedAddLang, setSelectedAddLang] = useState("");
+  const [pendingSelectLang, setPendingSelectLang] = useState("");
   const [transcripts, setTranscripts] = useState<Record<string, TranscriptResponse>>({});
   const [sources, setSources] = useState<SourceItem[] | null>(null);
   const [tab, setTab] = useState<"transcript" | "sources">("transcript");
   const [canceling, setCanceling] = useState(false);
+  const [addingLanguage, setAddingLanguage] = useState(false);
+  const [addLanguageError, setAddLanguageError] = useState<string | null>(null);
 
   const running = detail?.status === "running" || detail?.status === "queued";
   const succeeded = detail?.status === "succeeded";
+  const requestedLanguages = detail?.languages?.requested ?? [];
+  const readyLanguages = detail?.languages?.ready ?? [];
+  const pendingLanguages = requestedLanguages.filter((code) => !readyLanguages.includes(code));
+  const addableLanguages = useMemo(
+    () => LANGUAGES.filter((language) => !requestedLanguages.includes(language.code)),
+    [requestedLanguages]
+  );
 
   // pick default language once we know the run's primary
   useEffect(() => {
     if (!activeLang && detail?.languages?.primary) setActiveLang(detail.languages.primary);
   }, [detail?.languages?.primary, activeLang]);
+
+  useEffect(() => {
+    if (!selectedAddLang || !addableLanguages.some((language) => language.code === selectedAddLang)) {
+      setSelectedAddLang(addableLanguages[0]?.code ?? "");
+    }
+  }, [addableLanguages, selectedAddLang]);
+
+  useEffect(() => {
+    if (!succeeded || pendingLanguages.length === 0) return;
+    const timer = window.setInterval(() => {
+      refresh();
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [succeeded, pendingLanguages.length, refresh]);
+
+  useEffect(() => {
+    if (!pendingSelectLang || !readyLanguages.includes(pendingSelectLang)) return;
+    setActiveLang(pendingSelectLang);
+    setPendingSelectLang("");
+  }, [pendingSelectLang, readyLanguages]);
 
   // load transcript for the active language when it becomes ready
   useEffect(() => {
@@ -66,6 +98,22 @@ export function RunPage() {
       /* watch will reflect terminal state */
     }
     setCanceling(false);
+  };
+
+  const addLanguage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!runId || !selectedAddLang) return;
+    setAddingLanguage(true);
+    setAddLanguageError(null);
+    try {
+      await api.addLanguages(runId, { languages: [selectedAddLang] });
+      setPendingSelectLang(selectedAddLang);
+      await refresh();
+    } catch (e) {
+      setAddLanguageError(e instanceof ApiErr ? e.message : "Could not start language render.");
+    } finally {
+      setAddingLanguage(false);
+    }
   };
 
   const transcript = transcripts[activeLang];
@@ -146,12 +194,44 @@ export function RunPage() {
 
       {succeeded && (
         <>
-          {detail.languages && detail.languages.requested.length > 1 && (
-            <LanguageSwitcher
-              languages={detail.languages}
-              value={activeLang}
-              onChange={setActiveLang}
-            />
+          {detail.languages && (
+            <div className="language-tools">
+              {detail.languages.requested.length > 1 && (
+                <LanguageSwitcher
+                  languages={detail.languages}
+                  value={activeLang}
+                  onChange={setActiveLang}
+                />
+              )}
+
+              {addableLanguages.length > 0 && (
+                <form className="add-language" onSubmit={addLanguage}>
+                  <select
+                    className="input"
+                    value={selectedAddLang}
+                    onChange={(e) => setSelectedAddLang(e.target.value)}
+                    disabled={addingLanguage}
+                    aria-label="Add language"
+                  >
+                    {addableLanguages.map((language) => (
+                      <option key={language.code} value={language.code}>
+                        {language.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button className="btn sm" type="submit" disabled={addingLanguage || !selectedAddLang}>
+                    {addingLanguage ? "Adding..." : "Add language"}
+                  </button>
+                </form>
+              )}
+
+              {pendingLanguages.length > 0 && (
+                <div className="hint">
+                  Rendering {pendingLanguages.map((code) => langMeta(code).label).join(", ")}
+                </div>
+              )}
+              {addLanguageError && <div className="hint err-text">{addLanguageError}</div>}
+            </div>
           )}
 
           {activeLang && (

@@ -1,7 +1,8 @@
 // Shared Backend interface: both the real HTTP client and the in-browser mock implement it,
 // so components never know which one they're talking to.
 import type {
-  CreateRunRequest, CreateRunResponse, RunDetail, RunEvent, RunSummary,
+  AddLanguagesRequest, AddLanguagesResponse, CreateRunRequest, CreateRunResponse,
+  RunDetail, RunEvent, RunSummary,
   SourcesResponse, TranscriptResponse,
 } from "./types";
 
@@ -26,6 +27,7 @@ export interface Backend {
   listRuns(limit?: number): Promise<RunSummary[]>;
   getRun(id: string): Promise<RunDetail>;
   createRun(req: CreateRunRequest): Promise<CreateRunResponse>;
+  addLanguages(id: string, req: AddLanguagesRequest): Promise<AddLanguagesResponse>;
   cancelRun(id: string): Promise<void>;
   getTranscript(id: string, lang?: string): Promise<TranscriptResponse>;
   getSources(id: string): Promise<SourcesResponse>;

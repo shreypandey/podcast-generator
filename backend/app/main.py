@@ -39,6 +39,10 @@ class CreateRunRequest(BaseModel):
     custom_style: str = ""
 
 
+class AddLanguagesRequest(BaseModel):
+    languages: list[str]
+
+
 @app.exception_handler(ApiError)
 async def api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:
     return JSONResponse(
@@ -102,6 +106,25 @@ def cancel_run(run_id: str) -> dict[str, str]:
         raise ApiError(409, "terminal_run", "Run is already terminal")
     row = db.get_run(run_id) or {"status": "canceled"}
     return {"run_id": run_id, "status": row["status"]}
+
+
+@app.post("/api/runs/{run_id}/languages", status_code=202)
+def add_languages(run_id: str, req: AddLanguagesRequest) -> dict[str, Any]:
+    try:
+        result = jobs.request_language_render(run_id, req.languages)
+    except KeyError as e:
+        raise ApiError(404, "not_found", "Run not found") from e
+    except jobs.RenderArtifactsNotReady as e:
+        raise ApiError(409, "language_render_not_ready", str(e)) from e
+    except ValueError as e:
+        raise ApiError(400, "validation_error", str(e)) from e
+    row = result["run"]
+    return {
+        "run_id": run_id,
+        "status": "queued" if result["queued"] else row["status"],
+        "languages": _language_state(row),
+        "queued_languages": result["queued"],
+    }
 
 
 @app.get("/api/runs/{run_id}/events")
@@ -274,7 +297,7 @@ def _run_detail(row: dict[str, Any]) -> dict[str, Any]:
         "depth": row["depth"],
         "status": row["status"],
         "stage": row["stage"],
-        "languages": {"requested": row["languages"], "ready": ready, "primary": primary},
+        "languages": _language_state(row),
         "steering": row["steering"],
         "progress": {
             "current": row["progress_current"],
@@ -293,6 +316,14 @@ def _run_detail(row: dict[str, Any]) -> dict[str, Any]:
             "sources_url": f"/api/runs/{row['run_id']}/sources" if _artifact_path(row["run_id"], "source").is_file() else None,
             "episode_url": f"/api/runs/{row['run_id']}/episode?lang={primary}" if primary_ready else None,
         },
+    }
+
+
+def _language_state(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "requested": row["languages"],
+        "ready": _ready_languages(row["run_id"], row["languages"]),
+        "primary": _primary_language(row),
     }
 
 
@@ -331,7 +362,7 @@ def _primary_language(row: dict[str, Any]) -> str:
 def _ready_languages(run_id: str, requested: list[str]) -> list[str]:
     ready = []
     for lang in requested:
-        if _artifact_path(run_id, f"episode_{lang}").is_file() and (_run_dir(run_id) / f"episode_{lang}.wav").is_file():
+        if jobs.is_language_ready(run_id, lang):
             ready.append(lang)
     return ready
 

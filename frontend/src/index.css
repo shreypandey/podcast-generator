@@ -355,11 +355,15 @@ details.adv[open] > summary::before { transform: rotate(90deg); }
 .scrub input[type="range"] { height: 5px; }
 
 /* language switcher */
+.language-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .langbar { display: flex; gap: 6px; flex-wrap: wrap; }
 .lang-tab { padding: 6px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .lang-tab[aria-pressed="true"] { background: var(--text); color: var(--bg-elevated); border-color: var(--text); }
 .lang-tab:disabled { opacity: 0.45; cursor: not-allowed; }
 .lang-tab .flag { font-size: 14px; }
+.add-language { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.add-language .input { min-width: 150px; width: auto; padding: 7px 10px; font-size: 13px; }
+.err-text { color: var(--danger); }
 
 /* ------------------------------------------------------------------ transcript */
 .transcript { display: flex; flex-direction: column; gap: 4px; }

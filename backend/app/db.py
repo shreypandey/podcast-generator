@@ -142,6 +142,23 @@ def update_run(run_id: str, *, status: str | None = None, stage: str | None = No
         conn.execute(f"UPDATE runs SET {', '.join(updates)} WHERE run_id = ?", params)
 
 
+def append_run_languages(run_id: str, languages: list[str], path: str | None = None) -> list[str]:
+    init_db(path)
+    with _connect(path) as conn:
+        row = conn.execute("SELECT languages_json FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+        if row is None:
+            raise KeyError(run_id)
+        requested = json.loads(row["languages_json"] or "[]")
+        for lang in languages:
+            if lang not in requested:
+                requested.append(lang)
+        conn.execute(
+            "UPDATE runs SET languages_json = ? WHERE run_id = ?",
+            (json.dumps(requested, ensure_ascii=False), run_id),
+        )
+        return requested
+
+
 def request_cancel(run_id: str, path: str | None = None) -> bool:
     init_db(path)
     with _connect(path) as conn:

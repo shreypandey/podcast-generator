@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app import config, db
+from app import config, db, jobs
 from app.main import app
 
 
@@ -78,6 +78,46 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(body["languages"]["requested"], ["en-IN", "hi-IN"])
         self.assertEqual(body["languages"]["ready"], [])
         self.assertIsNone(body["artifacts"]["audio_url"])
+
+    def test_add_languages_returns_updated_language_state(self):
+        run = {
+            "run_id": "R1",
+            "topic": "test topic",
+            "length": "short",
+            "depth": 1,
+            "languages": ["en-IN", "hi-IN"],
+            "status": "succeeded",
+            "stage": "complete",
+            "steering": {},
+            "progress_current": 1,
+            "progress_total": 1,
+            "progress_label": "Complete",
+            "created_at": "2026-01-01T00:00:00Z",
+            "started_at": "2026-01-01T00:00:00Z",
+            "finished_at": "2026-01-01T00:00:00Z",
+            "error": None,
+            "cancel_requested": False,
+        }
+        with patch("app.main.jobs.request_language_render", return_value={
+            "run": run,
+            "requested": ["hi-IN"],
+            "queued": ["hi-IN"],
+        }):
+            res = self.client.post("/api/runs/R1/languages", json={"languages": ["hi-IN"]})
+
+        self.assertEqual(res.status_code, 202)
+        body = res.json()
+        self.assertEqual(body["status"], "queued")
+        self.assertEqual(body["queued_languages"], ["hi-IN"])
+        self.assertEqual(body["languages"]["requested"], ["en-IN", "hi-IN"])
+
+    def test_add_languages_maps_missing_artifacts_to_409(self):
+        with patch("app.main.jobs.request_language_render",
+                   side_effect=jobs.RenderArtifactsNotReady("missing script")):
+            res = self.client.post("/api/runs/R1/languages", json={"languages": ["hi-IN"]})
+
+        self.assertEqual(res.status_code, 409)
+        self.assertEqual(res.json()["error"]["code"], "language_render_not_ready")
 
     def test_audio_not_ready_returns_structured_409(self):
         db.insert_run("R1", "test topic", "short", 1, ["en-IN"])

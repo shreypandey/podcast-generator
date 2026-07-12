@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiErr } from "../api";
 import type { RunDetail, RunEvent } from "../api";
 
@@ -8,6 +8,17 @@ export function useRunWatch(runId: string | undefined) {
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [error, setError] = useState<ApiErr | null>(null);
   const seen = useRef<Set<number>>(new Set());
+
+  const refresh = useCallback(async () => {
+    if (!runId) return;
+    try {
+      const next = await api.getRun(runId);
+      setDetail(next);
+      setError(null);
+    } catch (e) {
+      if (e instanceof ApiErr) setError(e);
+    }
+  }, [runId]);
 
   useEffect(() => {
     if (!runId) return;
@@ -30,5 +41,5 @@ export function useRunWatch(runId: string | undefined) {
     return stop;
   }, [runId]);
 
-  return { detail, events, error };
+  return { detail, events, error, refresh };
 }

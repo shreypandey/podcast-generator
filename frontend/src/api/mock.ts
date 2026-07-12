@@ -3,19 +3,20 @@
 // server. Uses the real mRNA run's multilingual data; synthesizes a plausible episode for any
 // other topic.
 import { ApiErr, type Backend, type WatchHandlers } from "./backend";
-import { lang as langMeta } from "./languages";
+import { LANGUAGES, lang as langMeta } from "./languages";
 import {
   MRNA_CAST, MRNA_CITATIONS, MRNA_SOURCES, MRNA_TRANSCRIPT_SOURCES, mrnaTurns,
 } from "./mockData";
 import { makeToneWavDataUri } from "./wav";
 import type {
-  Cast, CitationDetail, Citation, CreateRunRequest, Metrics, Progress,
+  AddLanguagesResponse, Cast, CitationDetail, Citation, CreateRunRequest, Metrics, Progress,
   RunDetail, RunEvent, RunLanguages, RunStatus, RunSummary, SourceItem, Stage,
   TranscriptResponse, TranscriptTurn,
 } from "./types";
 
 const TONE = makeToneWavDataUri(9, 174);
 const nowIso = () => new Date().toISOString();
+const SUPPORTED = new Set(LANGUAGES.map((l) => l.code));
 
 interface Episode {
   cast: Cast;
@@ -334,6 +335,34 @@ export const mockBackend: Backend = {
       status: "queued",
       status_url: `/api/runs/${mr.id}`,
       events_url: `/api/runs/${mr.id}/events`,
+    };
+  },
+
+  async addLanguages(id, req): Promise<AddLanguagesResponse> {
+    seed();
+    await tick();
+    const mr = store.get(id);
+    if (!mr) throw new ApiErr(404, "not_found", "Run not found");
+    const requested = req.languages.map((lc) => lc.trim()).filter(Boolean);
+    const unsupported = requested.find((lc) => !SUPPORTED.has(lc));
+    if (unsupported) throw new ApiErr(400, "validation_error", `unsupported language: ${unsupported}`);
+
+    const el = elapsed(mr);
+    const queued: string[] = [];
+    for (const lc of requested) {
+      if (!mr.langs.includes(lc)) mr.langs.push(lc);
+      const readyAt = mr.renderDoneAt.get(lc);
+      if (readyAt == null || readyAt > el) {
+        if (readyAt == null) mr.renderDoneAt.set(lc, el + 1600 + queued.length * 900);
+        queued.push(lc);
+      }
+    }
+    const d = computeDetail(mr);
+    return {
+      run_id: mr.id,
+      status: queued.length ? "queued" : d.status,
+      languages: d.languages!,
+      queued_languages: queued,
     };
   },
 

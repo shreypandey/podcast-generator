@@ -88,6 +88,17 @@ export interface CreateRunResponse {
   events_url: string;
 }
 
+export interface AddLanguagesRequest {
+  languages: string[];
+}
+
+export interface AddLanguagesResponse {
+  run_id: string;
+  status: RunStatus;
+  languages: RunLanguages;
+  queued_languages?: string[];
+}
+
 // SSE / poll event
 export interface RunEvent {
   event_id: number;

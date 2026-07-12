@@ -2,7 +2,8 @@
 // polling GET /api/runs/{id} (the documented fallback); live events use SSE when available.
 import { ApiErr, type Backend, type WatchHandlers } from "./backend";
 import type {
-  CreateRunRequest, CreateRunResponse, RunDetail, RunEvent, RunSummary,
+  AddLanguagesRequest, AddLanguagesResponse, CreateRunRequest, CreateRunResponse,
+  RunDetail, RunEvent, RunSummary,
   SourcesResponse, TranscriptResponse,
 } from "./types";
 
@@ -57,6 +58,13 @@ export const realBackend: Backend = {
 
   createRun(body: CreateRunRequest) {
     return req<CreateRunResponse>("/api/runs", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  addLanguages(id: string, body: AddLanguagesRequest) {
+    return req<AddLanguagesResponse>(`/api/runs/${id}/languages`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
   },
 
   async cancelRun(id) {
