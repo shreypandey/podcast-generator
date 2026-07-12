@@ -1,0 +1,30 @@
+# Keep the build context small and never bake secrets or host-built artifacts
+# into the image (deps/dist are rebuilt inside the Dockerfile).
+.git/
+.claude/
+
+# Secrets — provided as Railway env vars, never copied in
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+backend/.venv/
+
+# Node / frontend build (rebuilt in stage 1)
+frontend/node_modules/
+frontend/dist/
+
+# Generated runtime data (created fresh at runtime)
+backend/runs/
+backend/data/
+runs/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs / OS cruft
+*.log
+**/.DS_Store
