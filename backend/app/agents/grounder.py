@@ -150,11 +150,11 @@ def _verification_fact_block(f) -> str:
 
 def _verification_facts(factsheet, cited_fact_ids: list[str] | None = None) -> str:
     facts = factsheet.facts
-    if cited_fact_ids:
+    if cited_fact_ids is not None:
         wanted = set(cited_fact_ids)
         filtered = [f for f in facts if f.id in wanted]
-        facts = filtered or facts
-    return "\n".join(_verification_fact_block(f) for f in facts)
+        facts = filtered
+    return "\n".join(_verification_fact_block(f) for f in facts) or "  (none)"
 
 
 def verify_turn(client, turn_text: str, factsheet, run,

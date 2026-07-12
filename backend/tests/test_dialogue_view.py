@@ -8,8 +8,10 @@ from app.agents.director import Beat
 from app.artifacts import Cast, Fact, Persona, Segment, Turn
 from app.stages.dialogue import (
     _can_close_segment,
+    _fact_card,
     _outro,
     _repair_focus,
+    _repair_instruction,
     _repair_speaker_sequence,
     _should_stop_body_after_segment,
     _view,
@@ -45,6 +47,31 @@ class DialogueViewTests(unittest.TestCase):
 
         self.assertIn("F1 [mechanism/explain] score=0.00: mRNA is translated by ribosomes.", text)
         self.assertIn('evidence: "ribosomes read mRNA instructions inside the cell"', text)
+
+    def test_fact_card_includes_claim_and_private_evidence(self):
+        fact = Fact(
+            id="F1",
+            claim="The draft model proposes several tokens.",
+            source_quotes=["a lightweight draft model proposes a block of candidate tokens"],
+            fact_type="mechanism",
+            story_role="explain",
+        )
+
+        card = _fact_card(fact)
+
+        self.assertIn("F1 [mechanism/explain] CLAIM: The draft model proposes several tokens.", card)
+        self.assertIn(
+            'EVIDENCE: "a lightweight draft model proposes a block of candidate tokens"',
+            card,
+        )
+
+    def test_repair_instruction_uses_evidence_cards_as_boundary(self):
+        text = _repair_instruction(["target model verifies", "extra unsupported detail"])
+
+        self.assertIn("Rewrite the previous Expert turn using ONLY the FACTS YOU MAY USE", text)
+        self.assertIn("Treat each EVIDENCE line as the boundary", text)
+        self.assertIn("target model verifies", text)
+        self.assertIn("extra unsupported detail", text)
 
     def test_view_trims_long_evidence_quote(self):
         fact = Fact(

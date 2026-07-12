@@ -21,6 +21,10 @@ _FORWARD_DIRECTIVE = (
 _BANNED_OPENERS = ("you mentioned", "you said", "as you said", "as you noted",
                    "you talked about", "you brought up", "you pointed out")
 _VIEW_QUOTE_CHARS = 220
+_SPEAKER_QUOTE_CHARS = 220
+_SPEAKER_QUOTES_PER_FACT = 2
+_REPAIR_UNSUPPORTED_ITEMS = 3
+_REPAIR_UNSUPPORTED_CHARS = 420
 _FACT_TYPE_PRIORITY = {
     "mechanism": 0,
     "finding": 1,
@@ -191,6 +195,55 @@ def _quote_for_view(f) -> str:
     if len(quote) > _VIEW_QUOTE_CHARS:
         quote = quote[:_VIEW_QUOTE_CHARS - 3].rstrip() + "..."
     return quote
+
+
+def _trim_for_speaker(value: str, limit: int = _SPEAKER_QUOTE_CHARS) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= limit:
+        return text
+    return text[:limit - 3].rstrip() + "..."
+
+
+def _fact_card(f) -> str:
+    """Evidence card shown privately to the Expert; not meant to be read aloud."""
+    label = f"[{getattr(f, 'fact_type', 'background')}/{getattr(f, 'story_role', 'explain')}]"
+    lines = [f"{f.id} {label} CLAIM: {f.claim}"]
+    for quote in (getattr(f, "source_quotes", []) or [])[:_SPEAKER_QUOTES_PER_FACT]:
+        text = _trim_for_speaker(str(quote))
+        if text:
+            lines.append(f"  EVIDENCE: \"{text}\"")
+    caveats = [str(c).strip() for c in getattr(f, "caveats", []) if str(c).strip()]
+    if caveats:
+        lines.append("  CAVEAT: " + "; ".join(caveats[:2]))
+    return "\n".join(lines)
+
+
+def _fact_cards(fact_by_id: dict, focus: list[str]) -> list[str]:
+    return [_fact_card(fact_by_id[fid]) for fid in focus if fid in fact_by_id]
+
+
+def _unsupported_note(unsupported: list[str]) -> str:
+    items: list[str] = []
+    for value in unsupported[:_REPAIR_UNSUPPORTED_ITEMS]:
+        text = " ".join(str(value or "").split()).strip()
+        if text:
+            items.append(text)
+    note = "; ".join(items)
+    if len(unsupported) > len(items):
+        note = f"{note}; ..." if note else "unsupported specifics"
+    if len(note) > _REPAIR_UNSUPPORTED_CHARS:
+        note = note[:_REPAIR_UNSUPPORTED_CHARS - 3].rstrip() + "..."
+    return note or "unsupported specifics"
+
+
+def _repair_instruction(unsupported: list[str]) -> str:
+    return (
+        "REPAIR: Rewrite the previous Expert turn using ONLY the FACTS YOU MAY USE above. "
+        "Treat each EVIDENCE line as the boundary of what can be safely said. Do not add a new "
+        "mechanism, example, number, failure mode, or replacement detail unless it is directly "
+        "supported by those fact cards. Do not quote the evidence aloud. Drop or generalize "
+        f"these unsupported specifics: {_unsupported_note(unsupported)}"
+    )
 
 
 def _segment_terms(segment) -> list[str]:
@@ -403,7 +456,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
         turn = turns[gi]
         persona = cast.expert if turn.speaker == "expert" else cast.host
         focus = [fid for fid in turn.cited_fact_ids if fid in fact_by_id]
-        fact_texts = [fact_by_id[fid].claim for fid in focus]
+        fact_texts = _fact_cards(fact_by_id, focus) if turn.speaker == "expert" else []
         recent_ = turns[max(0, gi - config.CONTEXT_WINDOW_TURNS):gi]
         beat = director.Beat(speaker=turn.speaker, move=turn.move, fact_focus=focus,
                              intent="", segment_status="continue")
@@ -414,16 +467,19 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
             return
         verified = turn.verified
         if turn.speaker == "expert":
-            ok, unsupported = grounder.verify_turn(client, newtext, factsheet, run)
+            ok, unsupported = grounder.verify_turn(
+                client, newtext, factsheet, run, cited_fact_ids=focus
+            )
             if not ok and config.VERIFY_MAX_REPAIRS > 0:
-                repair = ("State ONLY what the FACTS support. Drop unsupported specifics: "
-                          + "; ".join(unsupported))
+                repair = _repair_instruction(unsupported)
                 rt = speaker.generate(client, turn.speaker, persona, beat, fact_texts, recent_,
                                       run, extra_instruction=repair, depth=settings.depth,
                                       settings=settings)
                 if rt:
                     newtext = rt
-                    ok, _ = grounder.verify_turn(client, newtext, factsheet, run)
+                    ok, _ = grounder.verify_turn(
+                        client, newtext, factsheet, run, cited_fact_ids=focus
+                    )
             verified = ok
         turn.text = newtext
         turn.verified = verified
@@ -457,7 +513,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
                     focus = list(dict.fromkeys(focus + conflicts))
             else:
                 focus = []
-            fact_texts = [fact_by_id[fid].claim for fid in focus]
+            fact_texts = _fact_cards(fact_by_id, focus) if beat.speaker == "expert" else []
 
             gen_instr = ""
             ladder_instr = _speaker_ladder_instruction(segment, body_count, beat)
@@ -484,19 +540,22 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
             # M2a: verification gate — only the EXPERT bears facts, so only it needs checking.
             verified = True
             if beat.speaker == "expert":
-                ok, unsupported = grounder.verify_turn(client, text, factsheet, run)
+                ok, unsupported = grounder.verify_turn(
+                    client, text, factsheet, run, cited_fact_ids=focus
+                )
                 repairs = 0
                 while not ok and repairs < config.VERIFY_MAX_REPAIRS:
                     repairs += 1
-                    instr = ("State ONLY what the FACTS support. Drop or generalize these "
-                             "unsupported specifics: " + "; ".join(unsupported))
+                    instr = _repair_instruction(unsupported)
                     retext = speaker.generate(client, beat.speaker, persona, beat, fact_texts,
                                               recent, run, extra_instruction=instr, depth=settings.depth,
                                               settings=settings)
                     if not retext:
                         break
                     text = retext
-                    ok, unsupported = grounder.verify_turn(client, text, factsheet, run)
+                    ok, unsupported = grounder.verify_turn(
+                        client, text, factsheet, run, cited_fact_ids=focus
+                    )
                 verified = ok
                 if not ok:
                     run.log(stage="verify", kind="unsupported", unsupported=unsupported,

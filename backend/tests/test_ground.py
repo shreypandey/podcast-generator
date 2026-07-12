@@ -106,6 +106,18 @@ class GroundReduceTests(unittest.TestCase):
         self.assertGreater(credible_fact.quality_score, unclear_fact.quality_score)
         self.assertIn("credible source domain", credible_fact.quality_notes)
 
+    def test_score_does_not_treat_foreign_edu_subdomain_as_credible_by_substring(self):
+        corpus = SourceCorpus(sources=[
+            Source(id="S1", url="https://www.qwe.edu.pl/tutorial",
+                   query_intents=["core_explainer"], search_rank=1),
+        ])
+        fact = quoted_fact("S1", "Speculative decoding uses a draft model.", "mechanism")
+
+        _score_facts([fact], corpus)
+
+        self.assertIn("unscored source domain", fact.quality_notes)
+        self.assertNotIn("credible source domain", fact.quality_notes)
+
     def test_score_calibration_does_not_saturate_authoritative_facts(self):
         corpus = SourceCorpus(sources=[
             Source(id="S1", url="https://www.cdc.gov/example",

@@ -45,9 +45,9 @@ _INTENT_SCORE = {
     "example_case": 0.035,
     "core_explainer": 0.025,
 }
-_CREDIBLE_DOMAIN_PARTS = (
-    ".gov", ".edu", ".ac.", "who.int", "nih.gov", "cdc.gov", "fda.gov", "nhs.uk",
-    "medlineplus.gov", "nature.com", "nejm.org", "thelancet.com", "bmj.com",
+_CREDIBLE_DOMAIN_NAMES = (
+    "who.int", "nih.gov", "cdc.gov", "fda.gov", "nhs.uk", "medlineplus.gov",
+    "nature.com", "nejm.org", "thelancet.com", "bmj.com",
     "frontiersin.org", "sciencedirect.com", "springer.com", "wiley.com", "jamanetwork.com",
 )
 _REPUTABLE_DOMAIN_PARTS = (
@@ -68,9 +68,19 @@ def _domain(url: str) -> str:
     return urlsplit(url or "").netloc.lower().removeprefix("www.")
 
 
+def _is_named_domain(domain: str, name: str) -> bool:
+    return domain == name or domain.endswith(f".{name}")
+
+
+def _is_credible_domain(domain: str) -> bool:
+    if domain.endswith(".gov") or domain.endswith(".edu") or ".ac." in domain:
+        return True
+    return any(_is_named_domain(domain, name) for name in _CREDIBLE_DOMAIN_NAMES)
+
+
 def _source_credibility(source: Source) -> tuple[float, str]:
     domain = _domain(source.url)
-    if any(part in domain for part in _CREDIBLE_DOMAIN_PARTS):
+    if _is_credible_domain(domain):
         return 0.04, "credible source domain"
     if any(part in domain for part in _REPUTABLE_DOMAIN_PARTS):
         return 0.02, "reputable explainer domain"

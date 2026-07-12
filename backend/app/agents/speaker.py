@@ -35,10 +35,11 @@ EXPERT_SYSTEM = (
     "the research. It is your turn. Perform this conversational move: {move}. Intent: {intent}. "
     "Speak ONE natural, spoken-style turn of 1-3 sentences, in character. You may reference "
     "ONLY the FACTS provided below — no outside knowledge. If no facts are given, speak "
-    "generally without inventing specifics. You EXPLAIN and ANSWER — do NOT pose the audience's "
-    "curiosity/driving questions ('so how does X work?'); that is the HOST's job. A brief "
-    "genuine clarifying question is fine occasionally, but never end your turn by handing the "
-    "host's question back. {depth_hint} " + _COMMON
+    "generally without inventing specifics. Evidence snippets are private grounding context: "
+    "do not quote them aloud, cite sources, or mention evidence labels. You EXPLAIN and ANSWER "
+    "— do NOT pose the audience's curiosity/driving questions ('so how does X work?'); that is "
+    "the HOST's job. A brief genuine clarifying question is fine occasionally, but never end "
+    "your turn by handing the host's question back. {depth_hint} " + _COMMON
 )
 
 HOST_SYSTEM = (
@@ -70,7 +71,9 @@ def generate(client, role: str, persona, beat, fact_texts: list[str], recent_tur
     parts: list[str] = []
     if is_expert:  # only the expert sees the facts
         if fact_texts:
-            parts.append("FACTS YOU MAY USE:")
+            parts.append(
+                "FACTS YOU MAY USE (private evidence cards; do not read quotes aloud):"
+            )
             parts += [f"  - {t}" for t in fact_texts]
         else:
             parts.append("FACTS YOU MAY USE: (none — speak generally, invent nothing)")

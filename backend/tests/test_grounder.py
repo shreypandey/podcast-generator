@@ -164,6 +164,20 @@ class GrounderVerificationTests(unittest.TestCase):
         self.assertNotIn("F1", user)
         self.assertIn("F2", user)
 
+    def test_verify_turn_empty_cited_fact_ids_does_not_expand_to_all_facts(self):
+        factsheet = FactSheet(facts=[
+            Fact(id="F1", claim="First claim.", source_quotes=["First quote."]),
+        ])
+
+        with patch("app.adapters.sarvam_llm.complete_json",
+                   return_value={"supported": True, "unsupported_claims": []}) as complete:
+            grounder.verify_turn(object(), "General framing.", factsheet, DummyRun(),
+                                 cited_fact_ids=[])
+
+        user = complete.call_args.args[2]
+        self.assertIn("KNOWN FACTS:\n  (none)", user)
+        self.assertNotIn("F1", user)
+
     def test_verify_turn_accepts_and_flags_verifier_failure(self):
         factsheet = FactSheet(facts=[
             Fact(id="F1", claim="A supported claim.", source_quotes=["A supported claim."]),
