@@ -60,9 +60,6 @@ export function TranscriptView({ data }: { data: TranscriptResponse }) {
             <div className="grow">
               <div className="who">
                 <span className="name">{t.speaker_name}</span>
-                {t.move && t.move !== "intro" && t.move !== "outro" && (
-                  <span className={`badge move ${t.move === "challenge" ? "challenge" : "soft"}`}>{t.move}</span>
-                )}
                 {!t.verified && (
                   <span
                     className="unverified-tag"

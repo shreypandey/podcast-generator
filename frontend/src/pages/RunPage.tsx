@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import type { SourceItem, TranscriptResponse } from "../api";
 import { AudioPlayer } from "../components/AudioPlayer";
-import { CastRow, GroundingStat, MetricStats, StatusBadge } from "../components/common";
+import { CastRow, StatusBadge } from "../components/common";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { RunProgress } from "../components/RunProgress";
 import { SourcesPanel } from "../components/SourcesPanel";
@@ -13,7 +13,7 @@ import { fmtRelative } from "../lib/format";
 
 export function RunPage() {
   const { runId } = useParams<{ runId: string }>();
-  const { detail, events, error } = useRunWatch(runId);
+  const { detail, error } = useRunWatch(runId);
 
   const [activeLang, setActiveLang] = useState("");
   const [transcripts, setTranscripts] = useState<Record<string, TranscriptResponse>>({});
@@ -130,15 +130,6 @@ export function RunPage() {
         </div>
       )}
 
-      {(succeeded || detail.metrics.grounding_rate != null || detail.metrics.source_count != null) && (
-        <div className="stack" style={{ gap: 10 }}>
-          <MetricStats metrics={detail.metrics} primaryLang={detail.languages?.primary} />
-          {(detail.metrics.grounding_rate != null || succeeded) && (
-            <GroundingStat metrics={detail.metrics} />
-          )}
-        </div>
-      )}
-
       {detail.status === "failed" && (
         <div className="banner err">
           ⚠ This run failed. {detail.error ?? "An unknown error occurred."}
@@ -151,7 +142,7 @@ export function RunPage() {
         </div>
       )}
 
-      {running && <RunProgress detail={detail} events={events} />}
+      {running && <RunProgress detail={detail} />}
 
       {succeeded && (
         <>
