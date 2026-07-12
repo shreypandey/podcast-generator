@@ -87,6 +87,9 @@ class JobRunnerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             jobs.create_run("test topic", languages=["xx-YY"], enqueue=False)
 
+    def test_executor_parallelism_tracks_config(self):
+        self.assertEqual(jobs._executor._max_workers, config.MAX_CONCURRENT_JOBS)
+
 
 if __name__ == "__main__":
     unittest.main()

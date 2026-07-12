@@ -375,7 +375,6 @@ details.adv[open] > summary::before { transform: rotate(90deg); }
 .turn.expert .name { color: var(--expert); }
 .turn .say { font-size: 15px; line-height: 1.62; }
 .turn .say .en-orig { display: block; margin-top: 6px; font-size: 13px; color: var(--text-faint); border-left: 2px solid var(--border-strong); padding-left: 10px; }
-.unverified-tag { color: var(--warn); background: var(--warn-soft); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; cursor: help; }
 
 /* citation chip */
 .cite {

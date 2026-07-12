@@ -25,6 +25,7 @@ Required env vars:
 Runtime env vars:
 
 - `DATABASE_PATH` defaults to `./data/app.db`
+- `MAX_CONCURRENT_JOBS` defaults to `1`
 - `RUNS_DIR` defaults to `./runs`
 - `FRONTEND_DIST_DIR` defaults to `../frontend/dist`
 
@@ -74,4 +75,5 @@ uv run python -m unittest discover -s tests
 
 - Cancellation is cooperative.
 - SQLite stores run state only; audio and transcripts remain file-based.
+- Increase `MAX_CONCURRENT_JOBS` if you want multiple runs to execute in parallel.
 - The API and UI should talk through `/api/*` only.

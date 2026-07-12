@@ -39,7 +39,7 @@ STAGE_LABELS = {
 }
 UNSAFE_EVENT_KEYS = {"user", "response", "usage"}
 
-_executor = ThreadPoolExecutor(max_workers=1)
+_executor = ThreadPoolExecutor(max_workers=config.MAX_CONCURRENT_JOBS)
 _futures: dict[str, Future] = {}
 
 

@@ -60,14 +60,6 @@ export function TranscriptView({ data }: { data: TranscriptResponse }) {
             <div className="grow">
               <div className="who">
                 <span className="name">{t.speaker_name}</span>
-                {!t.verified && (
-                  <span
-                    className="unverified-tag"
-                    title="This expert claim reaches beyond the cited evidence. Shown honestly rather than hidden (accept-and-flag)."
-                  >
-                    unverified
-                  </span>
-                )}
               </div>
               <div className="say">
                 {t.spoken || t.text}

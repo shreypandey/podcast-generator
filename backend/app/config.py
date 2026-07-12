@@ -13,6 +13,7 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 APP_DIR = os.path.dirname(os.path.dirname(__file__))
 RUNS_DIR = os.getenv("RUNS_DIR", os.path.join(APP_DIR, "runs"))
 DATABASE_PATH = os.getenv("DATABASE_PATH", os.path.join(APP_DIR, "data", "app.db"))
+MAX_CONCURRENT_JOBS = max(1, int(os.getenv("MAX_CONCURRENT_JOBS", "1")))
 FRONTEND_DIST_DIR = os.getenv(
     "FRONTEND_DIST_DIR",
     os.path.abspath(os.path.join(APP_DIR, "..", "frontend", "dist")),
@@ -92,6 +93,8 @@ class Settings:
     max_segments: int
     max_turns_per_segment: int
     min_turns_per_segment: int
+    min_total_turns: int
+    target_total_turns: int
     max_total_turns: int
     depth: int
     angle: str
@@ -101,8 +104,12 @@ class Settings:
     style: str
     custom_style: str
 
-# Body-turn budgets. Intro/outro framing adds four public turns around these.
-_LENGTH_TURNS = {"short": 8, "medium": 18, "long": 28}
+# Body-turn budgets. Outro framing adds two or three public turns around these.
+_LENGTH_TURN_RANGES = {
+    "short": (6, 8, 10),
+    "medium": (14, 18, 20),
+    "long": (22, 28, 32),
+}
 _DEPTH_QUERIES = {1: 2, 2: 3, 3: 4, 4: 5, 5: 5}
 _DEPTH_GROUNDING_SOURCES = {1: 4, 2: 6, 3: 8, 4: 10, 5: 12}
 _DEPTH_FACTS = {1: 8, 2: 12, 3: 16, 4: 22, 5: 28}
@@ -178,8 +185,11 @@ def normalize_steering(*, angle: str = "balanced", focus_questions=None,
 
 def resolve_settings(brief) -> Settings:
     depth = min(5, max(1, int(getattr(brief, "depth", 3) or 3)))
-    total = _LENGTH_TURNS.get(getattr(brief, "length", "medium") or "medium", _LENGTH_TURNS["medium"])
-    max_segments = 2 if total <= 6 else (3 if total <= 10 else 4)
+    min_total, target_total, max_total = _LENGTH_TURN_RANGES.get(
+        getattr(brief, "length", "medium") or "medium",
+        _LENGTH_TURN_RANGES["medium"],
+    )
+    max_segments = 3 if target_total <= 10 else 4
     max_grounding_sources = _DEPTH_GROUNDING_SOURCES[depth]
     steering = normalize_steering(
         angle=getattr(brief, "angle", "balanced"),
@@ -195,9 +205,11 @@ def resolve_settings(brief) -> Settings:
         num_sources=max_grounding_sources,
         max_facts=_DEPTH_FACTS[depth],
         max_segments=max_segments,
-        max_turns_per_segment=max(2, math.ceil(total / max_segments)),
-        min_turns_per_segment=2 if total <= 8 else (4 if total <= 18 else 5),
-        max_total_turns=total,
+        max_turns_per_segment=max(2, math.ceil(max_total / max_segments)),
+        min_turns_per_segment=2 if target_total <= 8 else (4 if target_total <= 18 else 5),
+        min_total_turns=min_total,
+        target_total_turns=target_total,
+        max_total_turns=max_total,
         depth=depth,
         angle=steering["angle"],
         focus_questions=steering["focus_questions"],
