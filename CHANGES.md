@@ -9,6 +9,27 @@ a proposed API contract review handed off as a document (see below).
 
 ---
 
+## 0. Run-progress UI update (post-review polish)
+
+Feedback: the live progress view was too detailed for a listener. Reworked
+`frontend/src/components/RunProgress.tsx` (+ feed styling in `frontend/src/index.css`):
+
+- **Pipeline regrouped into 4 user-facing phases** — the 13 internal backend stages now collapse
+  into steps a listener thinks in: **Collecting sources** (query_plan, research) → **Extracting
+  facts** (ground, annotate) → **Writing the script** (cast, plan, dialogue, verify, review,
+  humanize) → **Producing audio** (render, citations). "Extracting facts" is kept as its own
+  visible phase because grounding is the headline differentiator. Within-phase granularity (e.g.
+  "Grounding source 3 of 5") still shows on the progress bar.
+- **Activity feed de-noised** — a new `milestone()` mapper surfaces only plain-language moments
+  (Started · Planned the research · Found N sources · Read N sources for facts · Cast … ·
+  Outlined the conversation · Wrote the debate — N turns · Fact-checked every claim · Voiced in
+  <language> · Episode ready). Per-source/per-turn events collapse to one line each; internal
+  steps (tension annotate, reviewer pass, humanize, citations) are hidden; the raw stage-code
+  chip and monospace timestamps are gone. Unrecognized event kinds are hidden, so the feed can't
+  regress to noise against the real backend. Panel renamed "Live activity" → "Activity".
+
+---
+
 ## 1. API contract review (handoff to the backend team)
 
 **`frontend/API_CONTRACT_REVIEW.md`** — a prioritized, forwardable review of the draft API from

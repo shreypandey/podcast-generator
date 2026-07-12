@@ -335,11 +335,12 @@ details.adv[open] > summary::before { transform: rotate(90deg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* event feed */
-.feed { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
-.feed-line { display: flex; gap: 10px; padding: 5px 8px; border-radius: 7px; }
+.feed { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.feed-line { display: flex; align-items: baseline; gap: 9px; padding: 6px 8px; border-radius: 7px; }
 .feed-line:hover { background: var(--surface-2); }
-.feed-line .t { color: var(--text-faint); font-family: var(--mono); font-size: 11px; flex: none; }
-.feed-line .s { color: var(--accent); font-weight: 600; flex: none; min-width: 68px; }
+.feed-line .tick { color: var(--accent); flex: none; font-size: 12px; }
+.feed-line .msg { color: var(--text); }
+.feed-line:not(:first-child) .msg { color: var(--text-muted); }
 
 /* ------------------------------------------------------------------ audio player */
 .player { display: flex; flex-direction: column; gap: 14px; }
