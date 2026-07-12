@@ -13,9 +13,9 @@ ROLE_TEMP = {"host": 0.7, "expert": 0.5}
 _DEPTH_HINTS = {
     1: "Keep it high-level and brief.",
     2: "Keep it fairly high-level.",
-    3: "Balance the overview with a few specifics.",
-    4: "Go into specifics and mechanisms.",
-    5: "Go deep — specifics, mechanisms, and nuance.",
+    3: "Balance the overview with a few specifics, but keep prerequisites clear.",
+    4: "Go into specifics and mechanisms only after the prerequisite mental model is clear.",
+    5: "Go deep — specifics, mechanisms, and nuance — without skipping prerequisite definitions.",
 }
 
 # Only the EXPERT holds the research. The HOST is a smart audience-proxy who reasons and
@@ -25,6 +25,8 @@ _COMMON = (
     "topic to your co-host (\"you mentioned...\", \"you said...\", \"as you noted...\") — ask a "
     "forward question instead (\"what about...?\"). Genuine agreement reactions (\"you're "
     "right\") are fine. Refer to your co-host as \"you\"; never invent a name for them. "
+    "Learning ladder rule: when a technical term is needed, say the plain idea first, then name "
+    "the term; do not use dense terms as shortcuts before defining them. "
     'Respond with ONLY JSON: {{"text": "<your spoken turn>"}}.'
 )
 
@@ -48,7 +50,8 @@ HOST_SYSTEM = (
     "figures, dates, or study findings. Reference only what the expert has already said in the "
     "RECENT CONVERSATION, or broadly-known general knowledge. When you react to a number the "
     "expert gave, put its SIGNIFICANCE in your own words (e.g. \"that's a striking share\") — "
-    "do not repeat the exact figure. " + _COMMON
+    "do not repeat the exact figure. If the discussion jumps to a dense term too early, ask the "
+    "basic listener question before moving on. " + _COMMON
 )
 
 

@@ -43,24 +43,32 @@ def _turn_citation_numbers(turn, fact_by_id: dict, number: dict) -> list[int]:
 
 def write_transcript_md(path: str, topic: str, cast: Cast, script: Script,
                         fact_by_id: dict, source_by_id: dict,
-                        display_texts: list[str] | None = None) -> None:
+                        display_texts: list[str] | None = None,
+                        include_citations: bool = True,
+                        include_sources: bool = True,
+                        include_verification_flags: bool = True) -> None:
     """`display_texts` (per-turn) overrides the turn text — e.g. the translated/spoken
-    delivery — so a per-language transcript still carries the same citation markers."""
+    delivery. Public transcripts can hide citation/debug markers while evidence transcripts
+    keep them for inspection."""
     number, order = _ordered_sources(script, fact_by_id, source_by_id)
     name = {"host": cast.host.name, "expert": cast.expert.name}
 
     lines = [f"# {topic}", ""]
     for i, t in enumerate(script.turns):
         cites = _turn_citation_numbers(t, fact_by_id, number)
-        marker = " " + "".join(f"[{n}]" for n in cites) if cites else ""
-        flag = "" if getattr(t, "verified", True) else "  _(unverified)_"
+        marker = " " + "".join(f"[{n}]" for n in cites) if include_citations and cites else ""
+        flag = (
+            "" if (getattr(t, "verified", True) or not include_verification_flags)
+            else "  _(unverified)_"
+        )
         text = display_texts[i] if (display_texts and i < len(display_texts) and display_texts[i]) else t.text
         lines.append(f"**{name.get(t.speaker, t.speaker.title())}:** {text}{marker}{flag}")
         lines.append("")
 
-    lines += ["## Sources", ""]
-    for i, s in enumerate(order, start=1):
-        lines.append(f"{i}. [{s.title or s.url}]({s.url})")
+    if include_sources:
+        lines += ["## Sources", ""]
+        for i, s in enumerate(order, start=1):
+            lines.append(f"{i}. [{s.title or s.url}]({s.url})")
 
     with open(path, "w") as f:
         f.write("\n".join(lines) + "\n")

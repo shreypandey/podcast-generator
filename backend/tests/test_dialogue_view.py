@@ -3,8 +3,9 @@ from __future__ import annotations
 import unittest
 from types import SimpleNamespace
 
-from app.artifacts import Fact, Segment
-from app.stages.dialogue import _repair_focus, _view
+from app.agents.director import Beat
+from app.artifacts import Fact, Segment, Turn
+from app.stages.dialogue import _can_close_segment, _repair_focus, _repair_speaker_sequence, _view
 
 
 class DialogueViewTests(unittest.TestCase):
@@ -57,6 +58,31 @@ class DialogueViewTests(unittest.TestCase):
         self.assertLessEqual(len(evidence_line), 236)
         self.assertIn("...", evidence_line)
 
+    def test_view_includes_listener_ladder_fields(self):
+        fact = Fact(id="F1", claim="basic claim")
+        segment = Segment(
+            id="SEG1",
+            goal="Build the plain mental model.",
+            fact_ids=["F1"],
+            listener_question="What should I understand before the mechanism?",
+            terms_to_define=["technical term"],
+        )
+
+        text = _view(
+            "topic",
+            segment,
+            {"F1": fact},
+            recent_turns=[],
+            coverage={},
+            recent_beats=[],
+            challenges_left=2,
+        )
+
+        self.assertIn("LISTENER QUESTION TO ANSWER BEFORE ADVANCING", text)
+        self.assertIn("What should I understand before the mechanism?", text)
+        self.assertIn("TERMS TO DEFINE BEFORE USING AS SHORTHAND: technical term", text)
+        self.assertIn("LEARNING LADDER RULE", text)
+
     def test_repair_focus_assigns_best_fact_to_expert_explain(self):
         facts = {
             "F1": Fact(id="F1", claim="lower score", quality_score=0.4, fact_type="mechanism"),
@@ -108,6 +134,51 @@ class DialogueViewTests(unittest.TestCase):
         focus = _repair_focus(beat, [], ["F1", "F2"], facts, coverage={}, challenges_left=2)
 
         self.assertEqual(focus, ["F1"])
+
+    def test_speaker_sequence_opens_body_with_host(self):
+        beat = Beat(speaker="expert", move="explain", fact_focus=["F1"], intent="explain", segment_status="continue")
+        recent = [Turn(idx=0, speaker="host", text="intro", move="intro"),
+                  Turn(idx=1, speaker="expert", text="intro", move="intro")]
+
+        repaired = _repair_speaker_sequence(beat, recent, body_count=0)
+
+        self.assertEqual(repaired.speaker, "host")
+        self.assertEqual(repaired.fact_focus, [])
+        self.assertEqual(repaired.segment_status, "continue")
+
+    def test_speaker_sequence_replaces_repeated_expert_with_host(self):
+        beat = Beat(speaker="expert", move="explain", fact_focus=["F1"], intent="explain", segment_status="continue")
+        recent = [Turn(idx=2, speaker="expert", text="previous", move="explain")]
+
+        repaired = _repair_speaker_sequence(beat, recent, body_count=3)
+
+        self.assertEqual(repaired.speaker, "host")
+        self.assertEqual(repaired.move, "react")
+        self.assertEqual(repaired.fact_focus, [])
+
+    def test_speaker_sequence_replaces_repeated_host_with_expert(self):
+        beat = Beat(speaker="host", move="connect", fact_focus=[], intent="connect", segment_status="close")
+        recent = [Turn(idx=2, speaker="host", text="previous", move="react")]
+
+        repaired = _repair_speaker_sequence(beat, recent, body_count=3)
+
+        self.assertEqual(repaired.speaker, "expert")
+        self.assertEqual(repaired.move, "explain")
+        self.assertEqual(repaired.segment_status, "close")
+
+    def test_segment_close_preserves_remaining_turn_budget(self):
+        settings = SimpleNamespace(
+            min_turns_per_segment=4,
+            max_turns_per_segment=5,
+            max_total_turns=18,
+        )
+
+        self.assertTrue(_can_close_segment(4, 4, 0, 4, settings))
+        self.assertTrue(_can_close_segment(4, 8, 1, 4, settings))
+        self.assertFalse(_can_close_segment(4, 12, 2, 4, settings))
+        self.assertTrue(_can_close_segment(5, 13, 2, 4, settings))
+        self.assertFalse(_can_close_segment(4, 17, 3, 4, settings))
+        self.assertTrue(_can_close_segment(5, 18, 3, 4, settings))
 
 
 if __name__ == "__main__":

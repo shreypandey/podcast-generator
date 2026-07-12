@@ -114,6 +114,21 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(len(corpus.sources), 3)
         self.assertEqual([s.id for s in corpus.sources], ["S1", "S2", "S3"])
 
+    def test_overfetch_scales_with_source_budget(self):
+        plan = QueryPlan(topic="topic", queries=[
+            SearchQuery(id=f"Q{i}", intent="core_explainer", query=f"q{i}", priority=i)
+            for i in range(1, 6)
+        ])
+        exa = FakeExa({
+            f"q{i}": [result(f"https://example.com/{i}-{j}") for j in range(1, 9)]
+            for i in range(1, 6)
+        })
+
+        with patch("app.agents.query_planner.plan_queries", return_value=plan):
+            _, corpus = research.run(exa, object(), Brief(topic="topic"), settings(10, 5), DummyRun())
+
+        self.assertEqual(len(corpus.sources), 10)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -98,6 +98,40 @@ def _tension_priority(f, settings=None) -> tuple:
     )
 
 
+def _fallback_segment_goal(index: int, total: int) -> str:
+    if index == 1:
+        return (
+            "Onboard the listener: why this matters, the basic problem, and a plain-language "
+            "definition before naming technical terms."
+        )
+    if index == 2:
+        return "Explain the core mechanism with a concrete analogy or everyday example."
+    if index == total:
+        return "Surface tradeoffs or uncertainty, then set up the final listener recap."
+    return "Connect the mechanism to a real-world example, implication, or practical payoff."
+
+
+def _fallback_listener_question(index: int, total: int) -> str:
+    if index == 1:
+        return "What is this topic in plain language, and why should a normal listener care?"
+    if index == 2:
+        return "What basic mental model do I need before the expert details make sense?"
+    if index == total:
+        return "What should I remember, and what is still uncertain or hard?"
+    return "How does the simple model connect to real examples or consequences?"
+
+
+def _clean_terms(values) -> list[str]:
+    terms: list[str] = []
+    for value in values or []:
+        term = " ".join(str(value).split()).strip()
+        if term and term not in terms:
+            terms.append(term[:60])
+        if len(terms) >= 5:
+            break
+    return terms
+
+
 def _repair_outline_coverage(outline: Outline, factsheet: FactSheet, settings) -> Outline:
     """Deterministically ensure the outline exposes the strongest facts to the turn loop."""
     fact_by_id = {f.id: f for f in factsheet.facts}
@@ -105,6 +139,16 @@ def _repair_outline_coverage(outline: Outline, factsheet: FactSheet, settings) -
         return outline
 
     segs = outline.segments[:settings.max_segments]
+    target_segments = max(1, int(getattr(settings, "max_segments", len(segs)) or len(segs)))
+    while len(segs) < target_segments:
+        idx = len(segs) + 1
+        segs.append(Segment(id=f"SEG{idx}", goal=_fallback_segment_goal(idx, target_segments),
+                            fact_ids=[],
+                            listener_question=_fallback_listener_question(idx, target_segments)))
+    for idx, seg in enumerate(segs, start=1):
+        if not getattr(seg, "listener_question", ""):
+            seg.listener_question = _fallback_listener_question(idx, target_segments)
+        seg.terms_to_define = _clean_terms(getattr(seg, "terms_to_define", []))
     cap = max(3, min(_OUTLINE_FACT_CAP, math.ceil(len(fact_by_id) / max(1, len(segs))) + 1))
 
     for seg in segs:
@@ -205,16 +249,28 @@ def cast(client, topic: str, factsheet: FactSheet, run) -> Cast:
 def _outline_system(settings) -> str:
     steering = config.angle_brief(settings)
     return (
-        f"You are the director planning a podcast (~{settings.max_total_turns} turns total, "
+        f"You are the director planning a podcast body (~{settings.max_total_turns} body turns, "
+        "plus intro and outro framing, "
         f"depth {settings.depth}/5). Given the TOPIC and FACTS, produce an ordered outline of at "
-        f"most {settings.max_segments} segments that tells a coherent story: open with the "
-        "big-picture framing and why it matters, then build into the specifics and evidence, "
-        "then close. Don't lead with raw statistics. Each segment has a goal and lists the fact "
-        "ids it should cover. Follow the STEERING block for emphasis, but never invent facts or "
-        "ignore strong evidence. Also give a one-line opening hook and a closing.\n\n"
+        f"exactly {settings.max_segments} segments that follows a real listener learning ladder, "
+        "not just a longer Q&A. Model prerequisites: before expert terms, mechanisms, metrics, "
+        "or caveats, the listener needs the basic object, the ordinary problem, the inputs and "
+        "outputs, and a plain mental model. Segment 1 must answer the lowest-level listener "
+        "question: what is this in plain language, why does it matter, and what confusion does it "
+        "solve? Segment 2 should build the core mental model with an analogy or concrete example. "
+        "Later segments should add mechanisms, evidence, tradeoffs, uncertainty, or implications "
+        "only after the prerequisite idea is established. The final segment should set up a recap. "
+        "Do not lead with raw statistics or unexplained technical terms. If a technical term is "
+        "needed, define the plain idea first, then name the term. For each segment include: goal, "
+        "listener_question (a simple question a non-specialist needs answered before moving on), "
+        "terms_to_define (technical terms allowed in this segment only after plain definition), "
+        "and fact_ids. Follow the STEERING block for emphasis, but never invent facts or ignore "
+        "strong evidence. Also give a one-line opening hook and a closing that returns to the "
+        "listener's original question and tees up a 2-3 point recap.\n\n"
         f"STEERING:\n{steering}\n\nRespond with ONLY "
         'JSON: {"opening_hook": "...", "closing": "...", '
-        '"segments": [{"goal": "...", "fact_ids": ["F1", "F2"]}]}.'
+        '"segments": [{"goal": "...", "listener_question": "...", '
+        '"terms_to_define": ["..."], "fact_ids": ["F1", "F2"]}]}.'
     )
 
 
@@ -229,6 +285,8 @@ def plan_outline(client, topic: str, factsheet: FactSheet, settings, run) -> Out
             id=f"SEG{i}",
             goal=str(s.get("goal", "")).strip(),
             fact_ids=[str(x).strip() for x in (s.get("fact_ids") or [])],
+            listener_question=str(s.get("listener_question", "")).strip(),
+            terms_to_define=_clean_terms(s.get("terms_to_define") or []),
         ))
     if not segs:  # fallback: one segment covering everything
         segs = [Segment(id="SEG1", goal=topic, fact_ids=[f.id for f in factsheet.facts])]
@@ -276,11 +334,20 @@ BEAT_SYSTEM = (
     "example not yet mentioned (a disease, product, study, place), write the intent so the "
     "speaker INTRODUCES it with a bridge from what is already established — do not drop it as if "
     "it were already the subject.\n"
-    "MAKE IT LIVELY — do NOT just alternate host-ask then expert-explain. Vary it: the host "
-    "reacts (react), draws a connection (connect), or pushes back with reasoning (challenge, "
-    "e.g. 'but wouldn't that mean...?'); the expert illustrates with an example (illustrate) or "
-    "builds on the host's point, and MAY take two turns in a row to develop an idea. Avoid "
-    "repeating the previous move; prefer facts not yet used.\n"
+    "LEARNING LADDER: follow the segment's listener_question and terms_to_define. Do not advance "
+    "just because a fact is available. Before a technical term, metric, mechanism, or caveat, "
+    "make sure the listener has the prerequisite plain idea. If a term in terms_to_define has not "
+    "been explained in recent turns, choose a Host clarifying question or an Expert plain-language "
+    "definition before using it as shorthand. Podcast behavior: assume a smart but non-specialist "
+    "listener. If the previous Expert turn used jargon, a dense mechanism, or multiple new terms, "
+    "prefer a Host react/connect turn like 'wait, what does that mean in everyday terms?' or 'can "
+    "you give me a concrete example?' before advancing. Separate basics, mechanism, evidence, and "
+    "tradeoff instead of collapsing them into one expert answer.\n"
+    "MAKE IT LIVELY — alternate speakers, but do NOT just alternate host-ask then expert-explain. "
+    "Vary it: the host reacts (react), draws a connection (connect), or pushes back with "
+    "reasoning (challenge, e.g. 'but wouldn't that mean...?'); the expert illustrates with an "
+    "example (illustrate) or builds on the host's point. Avoid repeating the previous move; "
+    "prefer facts not yet used.\n"
     "STEERING: if the view includes angle/focus or style guidance, use it to choose emphasis and "
     "wording, but grounding and role rules still override it.\n"
     "Examples of good next beats:\n"

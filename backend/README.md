@@ -1,43 +1,77 @@
-# podcast-backend
+# Backend
 
-M0 walking skeleton for the podcast generator. Proves the toolchain end-to-end:
+FastAPI backend, job runner, and podcast pipeline orchestrator.
 
-```
-topic → Exa (1 source) → Sarvam-105B (1 fact) → Sarvam-105B (2-turn Host/Expert)
-      → Bulbul TTS (2 voices) → combined episode.wav
-```
+## What lives here
 
-See `../REQUIREMENTS.md`, `../ARCHITECTURE.md`, `../SCRIPT_GENERATION.md`, `../progress.md`.
+- `app/main.py` exposes the HTTP API and serves the compiled frontend in production.
+- `app/jobs.py` owns queueing, SQLite run metadata, cancellation, and the CLI job path.
+- `app/orchestrator.py` remains the pipeline entrypoint.
+- `app/stages/` and `app/agents/` contain the generation/render pipeline.
+- `app/adapters/` contains the external service clients.
 
 ## Setup
 
 ```bash
-cp .env.example .env      # then fill in EXA_API_KEY and SARVAM_API_KEY
+cp .env.example .env
 uv sync
 ```
 
+Required env vars:
+
+- `EXA_API_KEY`
+- `SARVAM_API_KEY`
+
+Runtime env vars:
+
+- `DATABASE_PATH` defaults to `./data/app.db`
+- `RUNS_DIR` defaults to `./runs`
+- `FRONTEND_DIST_DIR` defaults to `../frontend/dist`
+
 ## Run
 
+### API server
+
 ```bash
-uv run python -m app.run "the economics of desalination"
+uv run uvicorn app.main:app --reload
 ```
 
-Outputs a timestamped `runs/<id>/` with `brief.json`, `source.json`, `factsheet.json`,
-`script.json`, `episode.json`, `episode.wav`, and `manifest.json` (prompts, responses,
-latencies).
+### Direct pipeline CLI
 
-## Layout
+```bash
+uv run python -m app.run "the economics of desalination" --langs en-IN,hi-IN
+```
 
-| Path | Role |
-|---|---|
-| `app/config.py` | env, model ids, voice mapping, client factories |
-| `app/artifacts.py` | typed artifacts (pydantic) |
-| `app/adapters/` | one adapter per service: `exa`, `sarvam_llm`, `sarvam_tts` |
-| `app/stages/` | `research → ground → script → render` |
-| `app/orchestrator.py` | linear runner + artifact persistence + run manifest |
-| `app/run.py` | CLI entrypoint |
+### Job runner CLI
 
-## Scope (M0)
+```bash
+uv run python -m app.jobs run "the economics of desalination" --langs en-IN,hi-IN --wait
+```
 
-English-only, one source, one fact, two turns, no Director/verification/translate/frontend —
-all deliberately deferred to later milestones.
+## Outputs
+
+Pipeline runs write artifacts under `RUNS_DIR/<run_id>/`, including:
+
+- `brief.json`
+- `query_plan.json`
+- `source.json`
+- `factsheet.json`
+- `cast.json`
+- `outline.json`
+- `script.json`
+- `episode_<lang>.json`
+- `episode_<lang>.wav`
+- `transcript_<lang>.md`
+- `manifest.json`
+
+## Tests
+
+```bash
+uv run python -m unittest discover -s tests
+```
+
+## Notes
+
+- Cancellation is cooperative.
+- SQLite stores run state only; audio and transcripts remain file-based.
+- The API and UI should talk through `/api/*` only.

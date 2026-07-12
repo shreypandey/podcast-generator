@@ -29,6 +29,31 @@ class EvalHarnessTests(unittest.TestCase):
         self.assertGreater(native["native_ratio"], 0.8)
         self.assertGreater(latin["latin_ratio"], 0.8)
 
+    def test_consecutive_speaker_turns_ignores_outro_repeat(self):
+        repeats = evals._consecutive_speaker_turns([
+            {"idx": 0, "speaker": "host", "move": "intro"},
+            {"idx": 1, "speaker": "expert", "move": "intro"},
+            {"idx": 2, "speaker": "expert", "move": "explain"},
+            {"idx": 3, "speaker": "expert", "move": "outro"},
+        ])
+
+        self.assertEqual(len(repeats), 1)
+        self.assertEqual(repeats[0]["idx"], 2)
+
+    def test_public_transcript_leak_detector(self):
+        leaks = evals._public_transcript_leaks("Line [1]\n_(unverified)_\n## Sources\n")
+
+        self.assertEqual(leaks, ["inline citations", "unverified marker", "source dump"])
+
+    def test_early_jargon_detector_uses_opening_window(self):
+        terms = evals._early_jargon_terms([
+            {"text": "Today we explain the simple problem."},
+            {"text": "Then suddenly BCL11A and fetal hemoglobin appear."},
+            {"text": "Later text."},
+        ])
+
+        self.assertEqual(terms, ["bcl11a", "fetal hemoglobin"])
+
     def test_analyze_english_run_scores_artifacts_and_role_warnings(self):
         run_id = "R1"
         run_dir = Path(config.RUNS_DIR) / run_id

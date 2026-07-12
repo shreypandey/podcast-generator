@@ -1,6 +1,7 @@
 """Research stage: Brief -> QueryPlan -> SourceCorpus (N final sources)."""
 from __future__ import annotations
 
+import math
 from urllib.parse import urlsplit, urlunsplit
 
 from app.adapters import exa as exa_adapter
@@ -100,7 +101,7 @@ def _fallback_single_search(exa, brief: Brief, settings, run) -> tuple[QueryPlan
 def run(exa, sarvam, brief: Brief, settings, run) -> tuple[QueryPlan, SourceCorpus]:
     plan = query_planner.plan_queries(sarvam, brief.topic, settings.num_queries, run, settings)
     source_limit = getattr(settings, "max_grounding_sources", settings.num_sources)
-    per_query = 2 if source_limit <= 3 else 4
+    per_query = max(3, min(8, math.ceil(source_limit * 3 / max(1, len(plan.queries)))))
 
     candidates: list[Source] = []
     for query in plan.queries:

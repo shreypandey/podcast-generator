@@ -91,6 +91,7 @@ class Settings:
     max_facts: int
     max_segments: int
     max_turns_per_segment: int
+    min_turns_per_segment: int
     max_total_turns: int
     depth: int
     angle: str
@@ -100,10 +101,11 @@ class Settings:
     style: str
     custom_style: str
 
-_LENGTH_TURNS = {"short": 6, "medium": 10, "long": 16}
+# Body-turn budgets. Intro/outro framing adds four public turns around these.
+_LENGTH_TURNS = {"short": 8, "medium": 18, "long": 28}
 _DEPTH_QUERIES = {1: 2, 2: 3, 3: 4, 4: 5, 5: 5}
-_DEPTH_GROUNDING_SOURCES = {1: 3, 2: 4, 3: 6, 4: 7, 5: 8}
-_DEPTH_FACTS = {1: 6, 2: 9, 3: 12, 4: 16, 5: 20}
+_DEPTH_GROUNDING_SOURCES = {1: 4, 2: 6, 3: 8, 4: 10, 5: 12}
+_DEPTH_FACTS = {1: 8, 2: 12, 3: 16, 4: 22, 5: 28}
 
 
 def _clean_text(value: str, limit: int) -> str:
@@ -176,7 +178,7 @@ def normalize_steering(*, angle: str = "balanced", focus_questions=None,
 
 def resolve_settings(brief) -> Settings:
     depth = min(5, max(1, int(getattr(brief, "depth", 3) or 3)))
-    total = _LENGTH_TURNS.get(getattr(brief, "length", "medium") or "medium", 10)
+    total = _LENGTH_TURNS.get(getattr(brief, "length", "medium") or "medium", _LENGTH_TURNS["medium"])
     max_segments = 2 if total <= 6 else (3 if total <= 10 else 4)
     max_grounding_sources = _DEPTH_GROUNDING_SOURCES[depth]
     steering = normalize_steering(
@@ -194,6 +196,7 @@ def resolve_settings(brief) -> Settings:
         max_facts=_DEPTH_FACTS[depth],
         max_segments=max_segments,
         max_turns_per_segment=max(2, math.ceil(total / max_segments)),
+        min_turns_per_segment=2 if total <= 8 else (4 if total <= 18 else 5),
         max_total_turns=total,
         depth=depth,
         angle=steering["angle"],

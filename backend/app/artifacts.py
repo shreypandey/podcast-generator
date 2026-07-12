@@ -84,6 +84,8 @@ class Segment(BaseModel):
     id: str  # SEG1..
     goal: str
     fact_ids: list[str] = []
+    listener_question: str = ""
+    terms_to_define: list[str] = []
 
 
 class Outline(BaseModel):

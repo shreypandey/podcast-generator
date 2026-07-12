@@ -144,7 +144,12 @@ def run_pipeline(topic: str, length: str = "medium", depth: int = 3,
         run.save_artifact(f"episode_{ep.language}", ep)
         citations.write_transcript_md(
             os.path.join(run.dir, f"transcript_{ep.language}.md"),
-            brief.topic, cast, scr, fact_by_id, source_by_id, display_texts=ep.deliveries)
+            brief.topic, cast, scr, fact_by_id, source_by_id, display_texts=ep.deliveries,
+            include_citations=False, include_sources=False, include_verification_flags=False)
+        citations.write_transcript_md(
+            os.path.join(run.dir, f"transcript_evidence_{ep.language}.md"),
+            brief.topic, cast, scr, fact_by_id, source_by_id, display_texts=ep.deliveries,
+            include_citations=True, include_sources=True, include_verification_flags=True)
 
     run.save_manifest()
     print("\n✅ Episodes:")

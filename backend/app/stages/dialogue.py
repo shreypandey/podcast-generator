@@ -193,10 +193,54 @@ def _quote_for_view(f) -> str:
     return quote
 
 
+def _segment_terms(segment) -> list[str]:
+    return [str(t).strip() for t in getattr(segment, "terms_to_define", []) if str(t).strip()]
+
+
+def _speaker_ladder_instruction(segment, body_count: int, beat) -> str:
+    parts: list[str] = []
+    listener_question = str(getattr(segment, "listener_question", "") or "").strip()
+    terms = _segment_terms(segment)
+    if body_count < 4:
+        parts.append(
+            "This is still listener onboarding: establish the plain object, ordinary problem, "
+            "basic input/output, or everyday mental model before expert mechanisms."
+        )
+    if listener_question:
+        parts.append(f"Answer this listener prerequisite before advancing: {listener_question}")
+    if terms:
+        parts.append(
+            "Define these terms in plain language before using them as shorthand: "
+            + ", ".join(terms)
+        )
+    if beat.speaker == "expert":
+        parts.append(
+            "Say the plain idea first, then optionally name the technical term. Use at most one "
+            "new technical term in this turn unless each term is immediately defined."
+        )
+    else:
+        parts.append(
+            "If the expert concept is not yet simple, ask the basic clarifying question a smart "
+            "listener would ask."
+        )
+    return "LEARNING LADDER: " + " ".join(parts)
+
+
 def _view(topic: str, segment, fact_by_id: dict, recent_turns, coverage: dict,
           recent_beats: list[tuple[str, str]], challenges_left: int, settings=None) -> str:
-    lines = [f"TOPIC: {topic}", f"CURRENT SEGMENT GOAL: {segment.goal}", "",
-             "FACTS AVAILABLE THIS SEGMENT:"]
+    lines = [f"TOPIC: {topic}", f"CURRENT SEGMENT GOAL: {segment.goal}"]
+    listener_question = str(getattr(segment, "listener_question", "") or "").strip()
+    if listener_question:
+        lines.append(f"LISTENER QUESTION TO ANSWER BEFORE ADVANCING: {listener_question}")
+    terms = _segment_terms(segment)
+    if terms:
+        lines.append("TERMS TO DEFINE BEFORE USING AS SHORTHAND: " + ", ".join(terms))
+    lines += [
+        "LEARNING LADDER RULE: build prerequisites first; separate basics, mechanism, evidence, "
+        "tradeoff, and recap instead of collapsing them into one expert answer.",
+        "",
+        "FACTS AVAILABLE THIS SEGMENT:",
+    ]
     seg_ids = _segment_fact_ids(segment, fact_by_id)
     source_counts = _source_coverage(fact_by_id, coverage)
     seg_ids = sorted(
@@ -230,16 +274,19 @@ def _view(topic: str, segment, fact_by_id: dict, recent_turns, coverage: dict,
 def _intro(client, topic: str, cast: Cast, outline: Outline, run, settings=None) -> list[Turn]:
     hook = outline.opening_hook or topic
     host_instr = (
-        f"Open the show: welcome the listeners, tell them today's topic is \"{topic}\", "
-        f"and draw them in using this hook — \"{hook}\". Then introduce your co-host "
-        f"{cast.expert.name} ({cast.expert.background})."
+        f"Open the show for a general listener who may not know why this matters yet. First "
+        f"name the ordinary listener problem or confusion behind today's topic, \"{topic}\". "
+        f"Use this hook only after that setup — \"{hook}\". Define the topic in one plain "
+        f"sentence before any technical term. Then introduce expert guest {cast.expert.name} "
+        f"({cast.expert.background}). Do not call the expert a co-host."
     )
     t0 = speaker.framing_turn(client, "host", cast.host, host_instr, [], run, settings)
     turns = [Turn(idx=0, speaker="host", text=t0, move="intro")]
 
     expert_instr = (
-        f"Greet {cast.host.name} and the listeners, and in one or two sentences frame why this "
-        f"topic matters and what you'll help unpack — without giving specific numbers yet."
+        f"Greet {cast.host.name} and the listeners. In one or two plain sentences, say what "
+        f"you'll help unpack and why a normal listener should care. Avoid unexplained jargon, "
+        f"specific numbers, and advanced terms in this opening."
     )
     t1 = speaker.framing_turn(client, "expert", cast.expert, expert_instr, turns, run, settings)
     turns.append(Turn(idx=1, speaker="expert", text=t1, move="intro"))
@@ -249,19 +296,69 @@ def _intro(client, topic: str, cast: Cast, outline: Outline, run, settings=None)
 def _outro(client, cast: Cast, outline: Outline, recent, run, settings=None) -> list[Turn]:
     closing = outline.closing or "wrap up the key takeaway"
     expert_instr = (
-        f"Bring the conversation toward a close. If you address your co-host, call them "
-        f"{cast.host.name} (use exactly that name). Briefly synthesize the main takeaway and "
-        f"note honestly what's still uncertain. Guidance: {closing}"
+        f"Bring the conversation toward a close. If you address the host, call them "
+        f"{cast.host.name} (use exactly that name). Give a real listener recap, not a generic "
+        f"big-picture sentence. Use this natural shape: 'So, remember three things. First... "
+        f"Second... Third...' Return to the opening listener problem or hook, and avoid new "
+        f"technical terms. Note honestly what's still uncertain. Guidance: {closing}"
     )
     t0 = speaker.framing_turn(client, "expert", cast.expert, expert_instr, recent, run, settings)
     host_instr = (
-        f"Thank your co-host {cast.expert.name} (use exactly that name) and the listeners, "
-        f"and sign off warmly."
+        f"Thank expert guest {cast.expert.name} (use exactly that name) and the listeners. "
+        f"End with one soft closing sentence that reinforces the simplest takeaway. Do not "
+        f"call the expert a co-host."
     )
     turns = [Turn(idx=0, speaker="expert", text=t0, move="outro")]
     t1 = speaker.framing_turn(client, "host", cast.host, host_instr, recent + turns, run, settings)
     turns.append(Turn(idx=0, speaker="host", text=t1, move="outro"))
     return turns
+
+
+def _repair_speaker_sequence(beat: director.Beat, recent: list[Turn],
+                             body_count: int) -> director.Beat:
+    """Keep the body conversational: Host opens the body, then speakers alternate."""
+    if body_count == 0 and beat.speaker != "host":
+        return director.Beat(
+            speaker="host",
+            move="ask",
+            fact_focus=[],
+            intent="open the body with a concise question that sets up the current segment",
+            segment_status="continue",
+        )
+    if not recent:
+        return beat
+    prev = recent[-1]
+    if prev.move in ("intro", "outro") or prev.speaker != beat.speaker:
+        return beat
+    if beat.speaker == "expert":
+        move = "challenge" if beat.move == "challenge" else "react"
+        return director.Beat(
+            speaker="host",
+            move=move,
+            fact_focus=[],
+            intent=(
+                "react to the expert's previous point and ask a concise follow-up that bridges "
+                "to the next idea; do not add new facts"
+            ),
+            segment_status="continue",
+        )
+    return director.Beat(
+        speaker="expert",
+        move="explain",
+        fact_focus=beat.fact_focus,
+        intent="answer the host's previous turn directly, using only the focused facts",
+        segment_status=beat.segment_status,
+    )
+
+
+def _can_close_segment(seg_turns: int, body_count: int, segment_index: int,
+                       total_segments: int, settings) -> bool:
+    min_turns = getattr(settings, "min_turns_per_segment", 2)
+    if seg_turns < min_turns:
+        return False
+    remaining_segments = max(0, total_segments - segment_index - 1)
+    future_capacity = remaining_segments * getattr(settings, "max_turns_per_segment", min_turns)
+    return getattr(settings, "max_total_turns", body_count) - body_count <= future_capacity
 
 
 def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, settings, run) -> Script:
@@ -273,7 +370,6 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
     body_count = 0
     challenges_used = 0
     recent_beats: list[tuple[str, str]] = []
-
     def _revise(gi: int, rev: dict) -> None:
         """Regenerate turn[gi] in place per an editor flag; re-verify if it's the Expert."""
         turn = turns[gi]
@@ -305,7 +401,8 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
         turn.verified = verified
         run.log(stage="review", kind="revised", idx=gi, issue=rev["issue"])
 
-    for segment in outline.segments:
+    total_segments = len(outline.segments)
+    for segment_index, segment in enumerate(outline.segments):
         seg_start = len(turns)
         seg_turns = 0
         while seg_turns < settings.max_turns_per_segment and body_count < settings.max_total_turns:
@@ -315,6 +412,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
             beat = director.next_beat(client, view, run)
             if _is_pingpong(recent_beats, beat):  # bounded anti-monotony re-ask
                 beat = director.next_beat(client, view, run, extra=_VARY_DIRECTIVE)
+            beat = _repair_speaker_sequence(beat, recent, body_count)
 
             persona = cast.expert if beat.speaker == "expert" else cast.host
             is_challenge = beat.move == "challenge"
@@ -333,6 +431,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
             fact_texts = [fact_by_id[fid].claim for fid in focus]
 
             gen_instr = ""
+            ladder_instr = _speaker_ladder_instruction(segment, body_count, beat)
             if is_challenge:
                 gen_instr = (
                     "Honestly surface the tension here: these facts genuinely conflict or the "
@@ -341,12 +440,14 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
                     "Voice a skeptical, listener's-doubt question about how solid this really is "
                     "— push back without asserting any new facts."
                 )
+            gen_instr = " ".join(part for part in [gen_instr, ladder_instr] if part).strip()
 
             text = speaker.generate(client, beat.speaker, persona, beat, fact_texts, recent, run,
                                     extra_instruction=gen_instr, depth=settings.depth, settings=settings)
             if text and _has_banned_opener(text):  # bounded coherence regen
                 text = speaker.generate(client, beat.speaker, persona, beat, fact_texts, recent,
-                                        run, extra_instruction=_FORWARD_DIRECTIVE, depth=settings.depth,
+                                        run, extra_instruction=f"{_FORWARD_DIRECTIVE} {ladder_instr}",
+                                        depth=settings.depth,
                                         settings=settings)
             if not text:
                 break
@@ -381,7 +482,9 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
                 coverage[fid] = coverage.get(fid, 0) + 1
             body_count += 1
             seg_turns += 1
-            if beat.segment_status == "close":
+            if beat.segment_status == "close" and _can_close_segment(
+                seg_turns, body_count, segment_index, total_segments, settings
+            ):
                 break
 
         # M3 editor: review the completed segment and revise flagged turns

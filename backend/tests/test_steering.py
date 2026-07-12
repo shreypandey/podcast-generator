@@ -44,6 +44,23 @@ class SteeringConfigTests(unittest.TestCase):
         self.assertEqual(settings.tone, "conversational")
         self.assertEqual(settings.style, "curious_expert")
 
+    def test_depth_four_and_five_use_larger_source_budgets(self):
+        d4 = config.resolve_settings(Brief(topic="topic", depth=4))
+        d5 = config.resolve_settings(Brief(topic="topic", depth=5))
+
+        self.assertEqual(d4.max_grounding_sources, 10)
+        self.assertEqual(d4.max_facts, 22)
+        self.assertEqual(d5.max_grounding_sources, 12)
+        self.assertEqual(d5.max_facts, 28)
+
+    def test_medium_length_uses_expanded_learning_ladder_budget(self):
+        settings = config.resolve_settings(Brief(topic="topic", length="medium"))
+
+        self.assertEqual(settings.max_total_turns, 18)
+        self.assertEqual(settings.max_segments, 4)
+        self.assertEqual(settings.max_turns_per_segment, 5)
+        self.assertEqual(settings.min_turns_per_segment, 4)
+
     def test_cli_focus_split_supports_repeat_and_commas(self):
         self.assertEqual(_split_focus(["first, second", "third"]), ["first", "second", "third"])
 
@@ -113,10 +130,12 @@ class SteeringStyleTests(unittest.TestCase):
             speaker.generate(object(), "expert", persona, beat, ["fact"], [], DummyRun(), settings=settings)
 
         user = complete.call_args.args[2]
+        system = complete.call_args.args[1]
         self.assertIn("STYLE GUIDE:", user)
         self.assertIn("TONE: serious", user)
         self.assertIn("STYLE: news_analysis", user)
         self.assertIn("no jokes", user)
+        self.assertIn("plain idea first", system)
 
     def test_humanizer_prompt_includes_style_guide(self):
         turn = Turn(idx=0, speaker="host", text="This is the turn.")

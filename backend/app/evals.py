@@ -37,6 +37,11 @@ SCRIPT_RANGES = {
     "pa-IN": [(0x0A00, 0x0A7F)],
     "od-IN": [(0x0B00, 0x0B7F)],
 }
+TECHNICAL_TERMS = {
+    "bcl11a", "softmax", "surface code", "upper-layer attention", "attention heads",
+    "hilbert space", "ancilla", "cnot", "fetal hemoglobin", "glp-1", "cas9",
+    "off-target", "tokamak", "inertial confinement", "black mass",
+}
 
 
 def load_suite(path: Path = DEFAULT_SUITE) -> dict[str, Any]:
@@ -205,6 +210,10 @@ def analyze_english_run(item: dict[str, Any]) -> dict[str, Any]:
         "cast.json", "outline.json", "script.json", "episode_en-IN.json",
         "episode_en-IN.wav", "transcript_en-IN.md", "manifest.json",
     ])
+    public_transcript = (run_dir / "transcript_en-IN.md").read_text(
+        encoding="utf-8", errors="ignore") if (run_dir / "transcript_en-IN.md").is_file() else ""
+    public_leaks = _public_transcript_leaks(public_transcript)
+    early_jargon = _early_jargon_terms(turns)
 
     host_cited = [t.get("idx") for t in turns if t.get("speaker") == "host" and t.get("cited_fact_ids")]
     expert_missing_cites = [
@@ -215,6 +224,7 @@ def analyze_english_run(item: dict[str, Any]) -> dict[str, Any]:
         t.get("idx") for t in expert_body
         if "?" in str(t.get("text", ""))
     ]
+    consecutive_speaker_turns = _consecutive_speaker_turns(turns)
     unverified = [t.get("idx") for t in turns if not t.get("verified", True)]
     type_counts = Counter(str(f.get("fact_type", "background")) for f in facts)
     role_counts = Counter(str(f.get("story_role", "explain")) for f in facts)
@@ -232,6 +242,9 @@ def analyze_english_run(item: dict[str, Any]) -> dict[str, Any]:
         host_cited=host_cited,
         expert_missing_cites=expert_missing_cites,
         expert_questions=expert_questions,
+        consecutive_speaker_turns=consecutive_speaker_turns,
+        public_transcript_leaks=public_leaks,
+        early_jargon_terms=early_jargon,
         challenge_count=len([t for t in turns if t.get("move") == "challenge"]),
         duration=duration,
         angle=item.get("angle") or brief.get("angle"),
@@ -265,6 +278,9 @@ def analyze_english_run(item: dict[str, Any]) -> dict[str, Any]:
         "host_cited_turns": host_cited,
         "expert_missing_citation_turns": expert_missing_cites,
         "expert_question_turns": expert_questions,
+        "consecutive_speaker_turns": consecutive_speaker_turns,
+        "public_transcript_leaks": public_leaks,
+        "early_jargon_terms": early_jargon,
         "challenge_count": len([t for t in turns if t.get("move") == "challenge"]),
         "duration_sec": duration,
         "episode_deliveries": len(episode.get("deliveries", [])),
@@ -278,7 +294,7 @@ def analyze_translation_run(item: dict[str, Any], languages: list[str]) -> dict[
     run_dir = _run_dir(run_id)
     script = _read_json(run_dir / "script.json", {"turns": []})
     english_duration = _wav_duration(run_dir / "episode_en-IN.wav")
-    english_markers = _citation_marker_count(run_dir / "transcript_en-IN.md")
+    english_markers = _citation_marker_count(_evidence_transcript_path(run_dir, "en-IN"))
     results = []
 
     for lang in languages:
@@ -286,7 +302,7 @@ def analyze_translation_run(item: dict[str, Any], languages: list[str]) -> dict[
         deliveries = episode.get("deliveries", [])
         duration = _wav_duration(run_dir / f"episode_{lang}.wav")
         script_stats = _native_script_stats(" ".join(deliveries), lang)
-        marker_count = _citation_marker_count(run_dir / f"transcript_{lang}.md")
+        marker_count = _citation_marker_count(_evidence_transcript_path(run_dir, lang))
         warnings = _translation_warnings(
             lang=lang,
             run_dir=run_dir,
@@ -342,6 +358,17 @@ def _render_existing_run(client, run_id: str, languages: list[str]) -> None:
             str(run_dir / f"transcript_{ep.language}.md"),
             brief.topic, cast, script, fact_by_id, source_by_id,
             display_texts=ep.deliveries,
+            include_citations=False,
+            include_sources=False,
+            include_verification_flags=False,
+        )
+        citations.write_transcript_md(
+            str(run_dir / f"transcript_evidence_{ep.language}.md"),
+            brief.topic, cast, script, fact_by_id, source_by_id,
+            display_texts=ep.deliveries,
+            include_citations=True,
+            include_sources=True,
+            include_verification_flags=True,
         )
     run.save_manifest()
 
@@ -426,6 +453,12 @@ def _english_warnings(**kw) -> list[str]:
         warnings.append("expert turns missing citations")
     if kw["expert_questions"]:
         warnings.append("expert asks questions")
+    if kw["consecutive_speaker_turns"]:
+        warnings.append("consecutive same-speaker turns")
+    if kw["public_transcript_leaks"]:
+        warnings.append("public transcript leaks evidence markers")
+    if kw["early_jargon_terms"]:
+        warnings.append("early unexplained jargon")
     if kw["duration"] is None:
         warnings.append("missing English audio")
     elif kw["duration"] < 180:
@@ -479,6 +512,9 @@ def _score_english(warnings: list[str], grounding_rate: float | None, missing: l
         "low cited-source coverage": 8,
         "low fact utilization": 6,
         "expert asks questions": 5,
+        "consecutive same-speaker turns": 8,
+        "public transcript leaks evidence markers": 10,
+        "early unexplained jargon": 5,
     }
     for warning in warnings:
         score -= heavy.get(warning, 3)
@@ -595,6 +631,40 @@ def _used_fact_ids(turns: list[dict[str, Any]]) -> list[str]:
     return seen
 
 
+def _consecutive_speaker_turns(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    repeats: list[dict[str, Any]] = []
+    for i in range(1, len(turns)):
+        prev = turns[i - 1]
+        cur = turns[i]
+        if cur.get("move") == "outro":
+            continue
+        if prev.get("speaker") == cur.get("speaker"):
+            repeats.append({
+                "prev_idx": prev.get("idx", i - 1),
+                "idx": cur.get("idx", i),
+                "speaker": cur.get("speaker", ""),
+                "prev_move": prev.get("move", ""),
+                "move": cur.get("move", ""),
+            })
+    return repeats
+
+
+def _public_transcript_leaks(text: str) -> list[str]:
+    leaks = []
+    if re.search(r"\[\d+\]", text):
+        leaks.append("inline citations")
+    if "_(unverified)_" in text or "_unverified_" in text:
+        leaks.append("unverified marker")
+    if re.search(r"^## Sources", text, flags=re.M):
+        leaks.append("source dump")
+    return leaks
+
+
+def _early_jargon_terms(turns: list[dict[str, Any]], window: int = 4) -> list[str]:
+    text = " ".join(str(t.get("text", "")).lower() for t in turns[:window])
+    return sorted(term for term in TECHNICAL_TERMS if term in text)
+
+
 def _source_ids_for_facts(fact_ids: list[str], fact_by_id: dict[str, dict[str, Any]]) -> list[str]:
     seen: list[str] = []
     for fid in fact_ids:
@@ -612,6 +682,11 @@ def _citation_marker_count(path: Path) -> int:
     if not path.is_file():
         return 0
     return len(re.findall(r"\[\d+\]", path.read_text(encoding="utf-8", errors="ignore")))
+
+
+def _evidence_transcript_path(run_dir: Path, lang: str) -> Path:
+    path = run_dir / f"transcript_evidence_{lang}.md"
+    return path if path.is_file() else run_dir / f"transcript_{lang}.md"
 
 
 def _wav_duration(path: Path) -> float | None:
