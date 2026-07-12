@@ -1,0 +1,245 @@
+{
+  "suite_id": "podcast_quality_10_depth4_en",
+  "created_at": "2026-07-12T13:13:03+00:00",
+  "length": "medium",
+  "depth": 4,
+  "runs": [
+    {
+      "idx": 1,
+      "topic_id": "mrna_vaccine_myths",
+      "topic": "mRNA vaccines: mechanism, safety evidence, and common myths",
+      "run_id": "eval-podcast_quality_10_depth4_en-01-mrna-vaccine-myths",
+      "angle": "mythbusting",
+      "focus_questions": [
+        "Do mRNA vaccines change DNA?",
+        "What does the evidence say about serious side effects?"
+      ],
+      "custom_angle": "",
+      "tone": "conversational",
+      "style": "curious_expert",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T13:31:50+00:00",
+      "english_status": "succeeded",
+      "english_error": "Expecting ',' delimiter: line 93 column 6 (char 2064)",
+      "english_finished_at": "2026-07-12T13:43:39+00:00",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-01-mrna-vaccine-myths",
+      "translation_started_at": "2026-07-12T15:55:04+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T15:58:08+00:00"
+    },
+    {
+      "idx": 2,
+      "topic_id": "crispr_sickle_cell",
+      "topic": "CRISPR gene editing for sickle cell disease",
+      "run_id": "eval-podcast_quality_10_depth4_en-02-crispr-sickle-cell",
+      "angle": "mechanism",
+      "focus_questions": [
+        "How does the treatment work?",
+        "What are the main limitations and access issues?"
+      ],
+      "custom_angle": "",
+      "tone": "serious",
+      "style": "classroom",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T13:55:08+00:00",
+      "english_status": "succeeded",
+      "english_error": "LLM returned empty content (finish_reason=length); reasoning likely exceeded max_tokens even after retry.",
+      "english_finished_at": "2026-07-12T14:09:58+00:00",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-02-crispr-sickle-cell",
+      "translation_started_at": "2026-07-12T15:58:08+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T16:01:57+00:00"
+    },
+    {
+      "idx": 3,
+      "topic_id": "glp1_weight_loss",
+      "topic": "GLP-1 drugs for obesity and metabolic health",
+      "run_id": "eval-podcast_quality_10_depth4_en-03-glp1-weight-loss",
+      "angle": "controversy",
+      "focus_questions": [
+        "What benefits are well supported?",
+        "What tradeoffs and unknowns remain?"
+      ],
+      "custom_angle": "",
+      "tone": "investigative",
+      "style": "news_analysis",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T14:09:58+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-03-glp1-weight-loss",
+      "english_finished_at": "2026-07-12T14:23:21+00:00",
+      "translation_started_at": "2026-07-12T16:01:57+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T16:05:39+00:00"
+    },
+    {
+      "idx": 4,
+      "topic_id": "fusion_energy_progress",
+      "topic": "Nuclear fusion energy: recent progress and commercialization hurdles",
+      "run_id": "eval-podcast_quality_10_depth4_en-04-fusion-energy-progress",
+      "angle": "current",
+      "focus_questions": [
+        "What changed recently?",
+        "What still blocks practical fusion power?"
+      ],
+      "custom_angle": "",
+      "tone": "conversational",
+      "style": "news_analysis",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T14:23:21+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-04-fusion-energy-progress",
+      "english_finished_at": "2026-07-12T14:35:22+00:00",
+      "translation_started_at": "2026-07-12T16:05:39+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T16:09:47+00:00"
+    },
+    {
+      "idx": 5,
+      "topic_id": "quantum_error_correction",
+      "topic": "Quantum computing error correction and why it matters",
+      "run_id": "eval-podcast_quality_10_depth4_en-05-quantum-error-correction",
+      "angle": "beginner",
+      "focus_questions": [
+        "Why are quantum computers error-prone?",
+        "What does error correction actually fix?"
+      ],
+      "custom_angle": "",
+      "tone": "calm",
+      "style": "classroom",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T14:35:22+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-05-quantum-error-correction",
+      "english_finished_at": "2026-07-12T14:50:09+00:00",
+      "translation_started_at": "2026-07-12T16:09:47+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T16:13:38+00:00"
+    },
+    {
+      "idx": 6,
+      "topic_id": "ev_battery_recycling",
+      "topic": "Electric vehicle battery recycling and critical mineral supply chains",
+      "run_id": "eval-podcast_quality_10_depth4_en-06-ev-battery-recycling",
+      "angle": "practical",
+      "focus_questions": [
+        "Can recycling reduce mineral pressure?",
+        "What is working commercially today?"
+      ],
+      "custom_angle": "",
+      "tone": "conversational",
+      "style": "curious_expert",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T14:50:09+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-06-ev-battery-recycling",
+      "english_finished_at": "2026-07-12T15:04:54+00:00",
+      "translation_started_at": "2026-07-12T16:13:38+00:00",
+      "translation_status": "succeeded",
+      "translated_languages": [
+        "hi-IN",
+        "ta-IN"
+      ],
+      "translation_finished_at": "2026-07-12T16:16:47+00:00"
+    },
+    {
+      "idx": 7,
+      "topic_id": "ai_hallucination_rag",
+      "topic": "AI hallucinations, retrieval augmented generation, and grounded assistants",
+      "run_id": "eval-podcast_quality_10_depth4_en-07-ai-hallucination-rag",
+      "angle": "mechanism",
+      "focus_questions": [
+        "Why do language models hallucinate?",
+        "How much does retrieval actually help?"
+      ],
+      "custom_angle": "",
+      "tone": "investigative",
+      "style": "debate",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T15:04:54+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-07-ai-hallucination-rag",
+      "english_finished_at": "2026-07-12T15:16:18+00:00",
+      "translation_started_at": "2026-07-12T16:16:47+00:00",
+      "translation_status": "running"
+    },
+    {
+      "idx": 8,
+      "topic_id": "upi_financial_inclusion",
+      "topic": "UPI digital payments in India and financial inclusion",
+      "run_id": "eval-podcast_quality_10_depth4_en-08-upi-financial-inclusion",
+      "angle": "practical",
+      "focus_questions": [
+        "Who benefits most from UPI?",
+        "What risks or exclusions remain?"
+      ],
+      "custom_angle": "",
+      "tone": "conversational",
+      "style": "news_analysis",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T15:16:18+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-08-upi-financial-inclusion",
+      "english_finished_at": "2026-07-12T15:28:29+00:00"
+    },
+    {
+      "idx": 9,
+      "topic_id": "microplastics_health",
+      "topic": "Microplastics and human health evidence",
+      "run_id": "eval-podcast_quality_10_depth4_en-09-microplastics-health",
+      "angle": "controversy",
+      "focus_questions": [
+        "What evidence is strong versus speculative?",
+        "What should listeners not overclaim?"
+      ],
+      "custom_angle": "",
+      "tone": "serious",
+      "style": "curious_expert",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T15:28:29+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-09-microplastics-health",
+      "english_finished_at": "2026-07-12T15:43:04+00:00"
+    },
+    {
+      "idx": 10,
+      "topic_id": "coastal_climate_adaptation",
+      "topic": "Climate adaptation for coastal cities",
+      "run_id": "eval-podcast_quality_10_depth4_en-10-coastal-climate-adaptation",
+      "angle": "practical",
+      "focus_questions": [
+        "Which adaptation strategies work?",
+        "What are the tradeoffs around retreat, seawalls, and nature-based defenses?"
+      ],
+      "custom_angle": "",
+      "tone": "calm",
+      "style": "storytelling",
+      "custom_style": "",
+      "english_started_at": "2026-07-12T15:43:04+00:00",
+      "english_status": "succeeded",
+      "run_dir": "/Users/moonknight/Projects/podcast-generator/backend/runs/eval-podcast_quality_10_depth4_en-10-coastal-climate-adaptation",
+      "english_finished_at": "2026-07-12T15:55:04+00:00"
+    }
+  ],
+  "updated_at": "2026-07-12T16:16:47+00:00"
+}

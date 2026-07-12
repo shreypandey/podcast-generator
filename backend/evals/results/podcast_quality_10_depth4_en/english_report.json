@@ -1,0 +1,567 @@
+{
+  "suite_id": "podcast_quality_10_depth4_en",
+  "generated_at": "2026-07-12T15:55:04+00:00",
+  "phase": "english",
+  "summary": {
+    "count": 10,
+    "score_avg": 67.7,
+    "score_min": 52,
+    "score_max": 100,
+    "warning_counts": {
+      "grounding below 90%": 9,
+      "unverified turns present": 9,
+      "low cited-source coverage": 1,
+      "expert asks questions": 1
+    }
+  },
+  "runs": [
+    {
+      "topic_id": "mrna_vaccine_myths",
+      "topic": "mRNA vaccines: mechanism, safety evidence, and common myths",
+      "run_id": "eval-podcast_quality_10_depth4_en-01-mrna-vaccine-myths",
+      "status": "succeeded",
+      "score": 100,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "primary_official": 1,
+        "caveat_critique": 1,
+        "recent_current": 1,
+        "example_case": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 3,
+        "finding": 4,
+        "mechanism": 7,
+        "misconception": 1,
+        "background": 1
+      },
+      "story_roles": {
+        "challenge": 4,
+        "explain": 9,
+        "context": 2,
+        "illustrate": 1
+      },
+      "used_fact_count": 6,
+      "used_source_count": 4,
+      "source_coverage_pct": 57.1,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 36.4,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 5,
+      "grounding_rate": 100.0,
+      "unverified_turns": [],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 1,
+      "duration_sec": 217.52,
+      "episode_deliveries": 14,
+      "manifest_event_count": 101,
+      "warnings": []
+    },
+    {
+      "topic_id": "crispr_sickle_cell",
+      "topic": "CRISPR gene editing for sickle cell disease",
+      "run_id": "eval-podcast_quality_10_depth4_en-02-crispr-sickle-cell",
+      "status": "succeeded",
+      "score": 62,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "primary_official": 2,
+        "caveat_critique": 1,
+        "recent_current": 1,
+        "example_case": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "mechanism": 7,
+        "finding": 2,
+        "caveat": 7
+      },
+      "story_roles": {
+        "explain": 9,
+        "challenge": 7
+      },
+      "used_fact_count": 6,
+      "used_source_count": 5,
+      "source_coverage_pct": 71.4,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 6,
+        "expert": 8
+      },
+      "avg_words_per_turn": 40.9,
+      "expert_body_turns": 6,
+      "verified_expert_turns": 4,
+      "grounding_rate": 66.7,
+      "unverified_turns": [
+        4,
+        8
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 0,
+      "duration_sec": 260.81,
+      "episode_deliveries": 14,
+      "manifest_event_count": 115,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "glp1_weight_loss",
+      "topic": "GLP-1 drugs for obesity and metabolic health",
+      "run_id": "eval-podcast_quality_10_depth4_en-03-glp1-weight-loss",
+      "status": "succeeded",
+      "score": 71,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "primary_official": 1,
+        "caveat_critique": 1,
+        "recent_current": 1,
+        "example_case": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "mechanism": 4,
+        "caveat": 10,
+        "counterclaim": 1,
+        "stat": 1
+      },
+      "story_roles": {
+        "explain": 4,
+        "challenge": 11,
+        "illustrate": 1
+      },
+      "used_fact_count": 6,
+      "used_source_count": 4,
+      "source_coverage_pct": 57.1,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 45.1,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 4,
+      "grounding_rate": 80.0,
+      "unverified_turns": [
+        11
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 2,
+      "duration_sec": 285.08,
+      "episode_deliveries": 14,
+      "manifest_event_count": 113,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "fusion_energy_progress",
+      "topic": "Nuclear fusion energy: recent progress and commercialization hurdles",
+      "run_id": "eval-podcast_quality_10_depth4_en-04-fusion-energy-progress",
+      "status": "succeeded",
+      "score": 52,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "recent_current": 3,
+        "caveat_critique": 1,
+        "primary_official": 1,
+        "example_case": 1,
+        "core_explainer": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "mechanism": 5,
+        "caveat": 4,
+        "finding": 6,
+        "stat": 1
+      },
+      "story_roles": {
+        "explain": 9,
+        "challenge": 5,
+        "illustrate": 2
+      },
+      "used_fact_count": 5,
+      "used_source_count": 3,
+      "source_coverage_pct": 42.9,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 52.8,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 3,
+      "grounding_rate": 60.0,
+      "unverified_turns": [
+        4,
+        8
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 2,
+      "duration_sec": 276.9,
+      "episode_deliveries": 14,
+      "manifest_event_count": 103,
+      "warnings": [
+        "low cited-source coverage",
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "quantum_error_correction",
+      "topic": "Quantum computing error correction and why it matters",
+      "run_id": "eval-podcast_quality_10_depth4_en-05-quantum-error-correction",
+      "status": "succeeded",
+      "score": 62,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 4,
+        "example_case": 1,
+        "caveat_critique": 1,
+        "recent_current": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "finding": 4,
+        "caveat": 3,
+        "mechanism": 9
+      },
+      "story_roles": {
+        "explain": 10,
+        "challenge": 4,
+        "illustrate": 2
+      },
+      "used_fact_count": 7,
+      "used_source_count": 6,
+      "source_coverage_pct": 85.7,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 6,
+        "expert": 8
+      },
+      "avg_words_per_turn": 47.8,
+      "expert_body_turns": 6,
+      "verified_expert_turns": 4,
+      "grounding_rate": 66.7,
+      "unverified_turns": [
+        5,
+        7
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 0,
+      "duration_sec": 264.46,
+      "episode_deliveries": 14,
+      "manifest_event_count": 116,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "ev_battery_recycling",
+      "topic": "Electric vehicle battery recycling and critical mineral supply chains",
+      "run_id": "eval-podcast_quality_10_depth4_en-06-ev-battery-recycling",
+      "status": "succeeded",
+      "score": 60,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "example_case": 1,
+        "primary_official": 1,
+        "caveat_critique": 1,
+        "recent_current": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 5,
+        "mechanism": 6,
+        "finding": 4,
+        "stat": 1
+      },
+      "story_roles": {
+        "challenge": 6,
+        "explain": 10
+      },
+      "used_fact_count": 5,
+      "used_source_count": 5,
+      "source_coverage_pct": 71.4,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 37.3,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 1,
+      "grounding_rate": 20.0,
+      "unverified_turns": [
+        3,
+        5,
+        7,
+        11
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 1,
+      "duration_sec": 232.86,
+      "episode_deliveries": 14,
+      "manifest_event_count": 124,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "ai_hallucination_rag",
+      "topic": "AI hallucinations, retrieval augmented generation, and grounded assistants",
+      "run_id": "eval-podcast_quality_10_depth4_en-07-ai-hallucination-rag",
+      "status": "succeeded",
+      "score": 71,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "primary_official": 1,
+        "caveat_critique": 1,
+        "recent_current": 1,
+        "example_case": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 6,
+        "mechanism": 10
+      },
+      "story_roles": {
+        "challenge": 6,
+        "explain": 10
+      },
+      "used_fact_count": 6,
+      "used_source_count": 4,
+      "source_coverage_pct": 57.1,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 44.4,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 4,
+      "grounding_rate": 80.0,
+      "unverified_turns": [
+        7
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 2,
+      "duration_sec": 279.87,
+      "episode_deliveries": 14,
+      "manifest_event_count": 111,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "upi_financial_inclusion",
+      "topic": "UPI digital payments in India and financial inclusion",
+      "run_id": "eval-podcast_quality_10_depth4_en-08-upi-financial-inclusion",
+      "status": "succeeded",
+      "score": 71,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "primary_official": 1,
+        "caveat_critique": 1,
+        "example_case": 1,
+        "recent_current": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 7,
+        "mechanism": 4,
+        "finding": 3,
+        "stat": 2
+      },
+      "story_roles": {
+        "challenge": 8,
+        "context": 1,
+        "explain": 5,
+        "illustrate": 2
+      },
+      "used_fact_count": 5,
+      "used_source_count": 5,
+      "source_coverage_pct": 71.4,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 47,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 4,
+      "grounding_rate": 80.0,
+      "unverified_turns": [
+        11
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 0,
+      "duration_sec": 290.42,
+      "episode_deliveries": 14,
+      "manifest_event_count": 110,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    },
+    {
+      "topic_id": "microplastics_health",
+      "topic": "Microplastics and human health evidence",
+      "run_id": "eval-podcast_quality_10_depth4_en-09-microplastics-health",
+      "status": "succeeded",
+      "score": 57,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "caveat_critique": 1,
+        "primary_official": 1,
+        "recent_current": 1,
+        "example_case": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 7,
+        "mechanism": 6,
+        "finding": 3
+      },
+      "story_roles": {
+        "challenge": 9,
+        "explain": 7
+      },
+      "used_fact_count": 7,
+      "used_source_count": 4,
+      "source_coverage_pct": 57.1,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 6,
+        "expert": 8
+      },
+      "avg_words_per_turn": 41.8,
+      "expert_body_turns": 6,
+      "verified_expert_turns": 4,
+      "grounding_rate": 66.7,
+      "unverified_turns": [
+        9,
+        11
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [
+        4
+      ],
+      "challenge_count": 2,
+      "duration_sec": 271.72,
+      "episode_deliveries": 14,
+      "manifest_event_count": 117,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present",
+        "expert asks questions"
+      ]
+    },
+    {
+      "topic_id": "coastal_climate_adaptation",
+      "topic": "Climate adaptation for coastal cities",
+      "run_id": "eval-podcast_quality_10_depth4_en-10-coastal-climate-adaptation",
+      "status": "succeeded",
+      "score": 71,
+      "missing_files": [],
+      "query_count": 5,
+      "source_count": 7,
+      "source_intents": {
+        "core_explainer": 3,
+        "example_case": 1,
+        "caveat_critique": 1,
+        "primary_official": 1,
+        "recent_current": 1
+      },
+      "fact_count": 16,
+      "fact_types": {
+        "caveat": 7,
+        "mechanism": 5,
+        "finding": 4
+      },
+      "story_roles": {
+        "challenge": 10,
+        "explain": 5,
+        "context": 1
+      },
+      "used_fact_count": 5,
+      "used_source_count": 5,
+      "source_coverage_pct": 71.4,
+      "turn_count": 14,
+      "speaker_turns": {
+        "host": 7,
+        "expert": 7
+      },
+      "avg_words_per_turn": 40.9,
+      "expert_body_turns": 5,
+      "verified_expert_turns": 4,
+      "grounding_rate": 80.0,
+      "unverified_turns": [
+        6
+      ],
+      "host_cited_turns": [],
+      "expert_missing_citation_turns": [],
+      "expert_question_turns": [],
+      "challenge_count": 2,
+      "duration_sec": 254.2,
+      "episode_deliveries": 14,
+      "manifest_event_count": 111,
+      "warnings": [
+        "grounding below 90%",
+        "unverified turns present"
+      ]
+    }
+  ]
+}

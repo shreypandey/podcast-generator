@@ -1,0 +1,90 @@
+{
+  "suite_id": "podcast_quality_10_depth4_en",
+  "description": "Ten-topic podcast quality eval. English generation first, then representative translation render.",
+  "length": "medium",
+  "depth": 4,
+  "languages": ["en-IN"],
+  "translation_languages": ["hi-IN", "ta-IN"],
+  "topics": [
+    {
+      "id": "mrna_vaccine_myths",
+      "topic": "mRNA vaccines: mechanism, safety evidence, and common myths",
+      "angle": "mythbusting",
+      "focus_questions": ["Do mRNA vaccines change DNA?", "What does the evidence say about serious side effects?"],
+      "tone": "conversational",
+      "style": "curious_expert"
+    },
+    {
+      "id": "crispr_sickle_cell",
+      "topic": "CRISPR gene editing for sickle cell disease",
+      "angle": "mechanism",
+      "focus_questions": ["How does the treatment work?", "What are the main limitations and access issues?"],
+      "tone": "serious",
+      "style": "classroom"
+    },
+    {
+      "id": "glp1_weight_loss",
+      "topic": "GLP-1 drugs for obesity and metabolic health",
+      "angle": "controversy",
+      "focus_questions": ["What benefits are well supported?", "What tradeoffs and unknowns remain?"],
+      "tone": "investigative",
+      "style": "news_analysis"
+    },
+    {
+      "id": "fusion_energy_progress",
+      "topic": "Nuclear fusion energy: recent progress and commercialization hurdles",
+      "angle": "current",
+      "focus_questions": ["What changed recently?", "What still blocks practical fusion power?"],
+      "tone": "conversational",
+      "style": "news_analysis"
+    },
+    {
+      "id": "quantum_error_correction",
+      "topic": "Quantum computing error correction and why it matters",
+      "angle": "beginner",
+      "focus_questions": ["Why are quantum computers error-prone?", "What does error correction actually fix?"],
+      "tone": "calm",
+      "style": "classroom"
+    },
+    {
+      "id": "ev_battery_recycling",
+      "topic": "Electric vehicle battery recycling and critical mineral supply chains",
+      "angle": "practical",
+      "focus_questions": ["Can recycling reduce mineral pressure?", "What is working commercially today?"],
+      "tone": "conversational",
+      "style": "curious_expert"
+    },
+    {
+      "id": "ai_hallucination_rag",
+      "topic": "AI hallucinations, retrieval augmented generation, and grounded assistants",
+      "angle": "mechanism",
+      "focus_questions": ["Why do language models hallucinate?", "How much does retrieval actually help?"],
+      "tone": "investigative",
+      "style": "debate"
+    },
+    {
+      "id": "upi_financial_inclusion",
+      "topic": "UPI digital payments in India and financial inclusion",
+      "angle": "practical",
+      "focus_questions": ["Who benefits most from UPI?", "What risks or exclusions remain?"],
+      "tone": "conversational",
+      "style": "news_analysis"
+    },
+    {
+      "id": "microplastics_health",
+      "topic": "Microplastics and human health evidence",
+      "angle": "controversy",
+      "focus_questions": ["What evidence is strong versus speculative?", "What should listeners not overclaim?"],
+      "tone": "serious",
+      "style": "curious_expert"
+    },
+    {
+      "id": "coastal_climate_adaptation",
+      "topic": "Climate adaptation for coastal cities",
+      "angle": "practical",
+      "focus_questions": ["Which adaptation strategies work?", "What are the tradeoffs around retreat, seawalls, and nature-based defenses?"],
+      "tone": "calm",
+      "style": "storytelling"
+    }
+  ]
+}

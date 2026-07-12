@@ -1,0 +1,48 @@
+# ── Monorepo root .gitignore ──
+# Per-package rules also live in backend/.gitignore and frontend/.gitignore
+# (git honors nested .gitignore files). This is the shared + safety-net layer.
+
+# Secrets — never commit (public repo)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+wheels/
+
+# Generated run outputs & databases
+runs/
+*.db
+*.db-shm
+*.db-wal
+backend/data/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor / OS / local tooling
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.sw?
+.claude/settings.local.json
+coverage/

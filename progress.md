@@ -1,0 +1,116 @@
+# Progress
+
+Living status tracker. Update as milestones move. See `REQUIREMENTS.md` and `ARCHITECTURE.md`.
+
+## Status legend
+✅ done · 🔨 in progress · ⬜ not started · ⚠️ blocked
+
+## Milestones
+
+| # | Milestone | Status | Notes |
+|---|---|---|---|
+| — | Requirements (`REQUIREMENTS.md`) | ✅ | v0.1 locked |
+| — | Architecture (`ARCHITECTURE.md`) | ✅ | pipelines, subagents, artifact schemas |
+| — | Script-gen design (`SCRIPT_GENERATION.md`) | ✅ | 4-agent design + full rationale |
+| M0 | Repo scaffold + thin vertical slice | ✅ | live end-to-end run works: topic → Exa → fact → 2-turn script → TTS → 14.8s `episode.wav` |
+| M1 | Full English pipeline, one-shot + observability | ✅ | 4-agent loop live: multi-fact grounding → topic-derived personas → Director outline → per-turn loop → 8-turn / 85s episode. Big quality jump over M0 (grounded specifics, no dodging) |
+| M2 | Grounding + verifier + citations | ✅ | **M2a** verify gate + citations/`transcript.md`. **M2b** tension annotation + evidence-driven challenge (budget-rationed). Mechanism verified; real debate now bottlenecked by fact quality (see notes) |
+| M3 | Expert-debate quality + deep steering | ✅ | **Steering** `--length`/`--depth`, angle/focus, tone/style per-run `Settings`; **editor** per-segment `review_segment` → flag-and-regenerate (revised expert turns re-verified). Debate quality via M1-polish variety + M2b challenge. |
+| M4 | Render pipeline (translate → meaning-check → TTS) | 🔨 | v1 + M4.1 shipped and confirmed for en/hi/ta; meaning-preservation check remains deferred |
+| M5 | Frontend polish + metrics dashboard | ⬜ | |
+| M6 | "Join the conversation" (interactive Q&A) | ⬜ | **deferred to the very end**; live runtime + Sarvam STT |
+
+## Open decisions
+- Persistence: flat files/SQLite for v1 → revisit after M2.
+- Native-generation mode for Hindi: deferred (pivot-translate for all 11 for now).
+- Orchestrator: custom-minimal stage runner (not Temporal/Prefect) — recommended, to lock.
+- N (context window in turns), per-segment turn budget, disfluency density — tune in M1.
+
+## Decision log
+- 2026-07-11 — Scope locked: 11 Bulbul languages, hybrid input, all 4 differentiators.
+- 2026-07-11 — Multilingual = pivot-and-translate (reason in English, translate per language).
+- 2026-07-11 — Translate config: `modern-colloquial` + spoken form; meaning-preservation verifier subagent.
+- 2026-07-11 — Script gen = 4 agents (Grounder, Director, Host, Expert). See `SCRIPT_GENERATION.md`.
+- 2026-07-11 — Host is a **sharp peer**, not a novice; Grounder verifies **both** speakers.
+- 2026-07-11 — **Per-turn Director** (not beat-sheet hybrid); 3 calls/turn accepted.
+- 2026-07-11 — Two axes: correctness = Grounder silent fix; challenge = Director, evidence-driven only.
+- 2026-07-11 — Texture: structure (interrupt/backchannel) decided in script gen; realization per-language in render. Bulbul has no SSML/timestamps → timeline mixer needed.
+- 2026-07-11 — **"Join the conversation" deferred to the very end** of the project.
+- 2026-07-11 — Add **Sarvam STT (Saaras v3)** to the stack (needed later, for voice Join).
+- 2026-07-11 — M0 built with **uv** + Python 3.12; SDKs `sarvamai` 0.1.28, `exa-py` 2.16.0.
+- 2026-07-11 — Confirmed SDK contracts: `client.chat.completions(model="sarvam-105b", messages=...)`; `client.text_to_speech.convert(text, target_language_code, speaker, model="bulbul:v3", output_audio_codec="wav")` → `.audios` (base64 WAV list); `exa.search_and_contents(q, num_results, text, highlights)`.
+- 2026-07-11 — M0 voices: Host=`priya` (f), Expert=`aditya` (m). WAV combine via stdlib `wave` (no ffmpeg).
+- 2026-07-12 — Added **intro/outro framing phases** to the dialogue loop (uses outline hook/closing + persona names); outline nudged to build up, not open on stats. Fixed outro host hallucinating the co-host's name (now injected).
+- 2026-07-12 — **Voice matches persona gender**: casting now picks a gender per persona → mapped to gendered voice pools (`FEMALE_VOICES`/`MALE_VOICES`), kept distinct even for same-gender casts. Fixes "Alex" on a female voice. Validated `ritu/neha/rahul/shubh` on bulbul:v3. Render now uses the cast's assigned voices.
+- 2026-07-12 — Speaker guardrail against **fabricated back-references** ("you mentioned…" for things never said). Partial mitigation; the durable fix is the M3 `review_segment` editor + running summary.
+- 2026-07-12 — **Only the Expert bears facts.** FactSheet given only to the Expert; the Host is a smart generalist who reasons/asks/pushes back but introduces no specific stats (may echo what the Expert said). Fixes the host reciting researched figures; shrinks M2 verification to Expert turns. See `SCRIPT_GENERATION.md` §2. Verified: all host turns `facts=[]`.
+- 2026-07-12 — **Transient-error resilience:** `sarvam_llm.with_transient_retry` (retries 429/5xx, used by LLM + TTS adapters) so one flaky call in a ~30-call run doesn't discard all work. (A prior full run died on a transient API error mid-dialogue.)
+- 2026-07-12 — **M1 dialogue polish** (variety + coherence + host discipline): variety-focused Director beat prompt w/ few-shot + bounded anti-ping-pong re-ask; Host paraphrases significance instead of parroting exact figures; banned attributive openers ("you mentioned…") + bounded regen. Verified on 2 topics: distinct body moves 5 and 6 (was ~2, incl. a real `challenge`); 0 host fact-citations; 0 banned openers. See `steady-gliding-reef.md`.
+- 2026-07-12 — **Observed for M2:** the Expert sometimes states specific mechanisms with `fact_focus=[]` (e.g., "the nuclear envelope, a double membrane…") — i.e., ungrounded specifics slip when the Director assigns no fact. This is exactly what the M2 grounding-verification gate must catch.
+- 2026-07-12 — **M2a shipped:** `grounder.verify_turn` (LLM-as-judge) gates every EXPERT turn → bounded 1 repair → flag `verified=False` if still unsupported. Citations: `transcript.md` with inline `[n]` on expert turns + Sources list; `Episode.sources`. Grounding-rate metric printed/logged. Host turns untouched (0 citations). Files: `agents/grounder.py`, `stages/dialogue.py`, `stages/citations.py`, `orchestrator.py`, `artifacts.py`.
+- 2026-07-12 — **M2a finding (verified by manual fact-check):** the judge is *precise*, not over-flagging — it catches genuine expert overreach (unstated causal glue like "benefited most from…", outside-knowledge additions like BOO/BOOT "bear the risk"). Grounding rate ran **50–80%** across 2 topics because the small model embellishes beyond literal facts and one repair doesn't always strip it. **Trade-off (strict grounding ↔ natural speech) — DECIDED: accept-and-flag.** Keep the honest flagging (overreach marked, not hidden); do not tighten/loosen for now. Proceed to M2b.
+- 2026-07-12 — **M2b shipped:** `grounder.annotate_tension` (reduce step) flags `evidence_strength`/`conflicts_with`/`caveats`/`tension_type` (symmetric conflicts); Director's `_view` shows TENSION tags + a `MAX_CHALLENGES=2` budget; `challenge` fires only on flagged facts, Director picks Host-probe vs Expert-surface; expert-challenge `fact_focus` includes `conflicts_with` so it stays grounded/verified. Files: `agents/grounder.py`, `agents/director.py`, `stages/dialogue.py`, `stages/ground.py`, `artifacts.py`, `config.py`.
+- 2026-07-12 — **M2b mechanism verified (synthetic):** two conflicting facts (coffee reduces vs raises CV risk) → correctly cross-flagged `conflicts_with`, `empirical`, with caveats; a non-conflicting fact stayed `none`. Real coffee run fired 1 budget-rationed Host challenge.
+- 2026-07-12 — **KEY FINDING (next lever): fact quality bottlenecks real debate.** On real topics the grounder often extracts *methodology / single-source* claims ("study used PubMed", "assessed with AMSTAR") instead of substantive, contestable findings — so no conflicts exist to challenge. Fixing this = a grounding-quality pass (grounder prompt to prefer findings over methodology + more diverse Exa sources). Candidate next milestone (M2c / pre-M3).
+- 2026-07-12 — **Robustness:** `complete_json(fallback_text=True)` for speaker/framing turns — the model sometimes returns a bare sentence instead of `{\"text\": …}`; now tolerated instead of crashing the run.
+- 2026-07-12 — **M3 deep steering shipped (length + depth):** `Brief.length`/`Brief.depth` → `config.resolve_settings()` → per-run `Settings` threaded through research/ground/plan/dialogue (replaces the fixed globals). CLI `--length {short,medium,long} --depth {1-5}`. Depth also scales Expert detail via a prompt hint. Verified: short/d1 = 2 src/6 facts/6 turns/2 seg (terse); long/d5 = 6 src/20 facts/15 turns/4 seg (detailed). `review_segment` editor still deferred.
+- 2026-07-12 — **Robustness (transport):** `with_transient_retry` now also retries `httpx.RequestError` (network/read-timeout), not just HTTP 429/5xx; Sarvam client `timeout=120` (reasoning calls take 25s+). A long/d5 run had died on a raw read error mid-`verify_turn`.
+- 2026-07-12 — **M3 editor shipped:** `director.review_segment` (per-segment LLM-as-judge, conservative) flags defects (fabricated back-refs, persona bleed, repetition, flatness) → `dialogue._revise` regenerates flagged turns in place (`≤MAX_SEGMENT_REVISIONS=2`/segment) via the normal speaker path; **revised Expert turns are re-verified**. Verified: real run = 3/3 review calls, 0 revisions (already-clean output, conservative); synthetic bad segment → correctly flagged the fabricated back-reference with an actionable hint. **M3 complete (steering + editor).**
+- 2026-07-12 — **Editor upgraded to a parallel reviewer PANEL** (user idea): the single omnibus editor (which missed the COVID continuity/non-sequitur) is replaced by 3 focused reviewer subagents — `continuity` (hard), `consistency` (hard), `liveliness` (soft) — run **in parallel** (`ThreadPoolExecutor`), sharing a stable prefix + swapped objective (caching-ready; note **Sarvam has no prompt caching**, and reasoning tokens dominate so caching would save little anyway). Reviewers now get the **topic + prior conversation** (the missing context that caused the COVID miss). Flags aggregated hard-first, one per turn. Verified: synthetic COVID-drift segment → continuity reviewer flags "introduces COVID-19 not previously mentioned" [hard]; full run = 9 reviewer calls (3/seg, parallel, 0 errors), caught+fixed a real REPETITION the old editor missed. Root-cause `next_beat` bridge nudge = deferred follow-up.
+- 2026-07-12 — **Director bridge nudge shipped:** `next_beat` (`BEAT_SYSTEM`) COHERENCE rule — the intent must make each turn answer/follow the previous turn, and when a fact names an entity/example not yet mentioned, introduce it with a bridge (don't drop it as established). Defense-in-depth with the panel; effect hard to isolate stochastically. Verified no regression (mRNA run: 100% grounding, coherent, 0 COVID). Root-cause of the COVID drift now addressed on both sides (generation nudge + editor panel net).
+- 2026-07-12 — **Voice pref:** removed Bulbul `rahul` (bad quality, user) from `MALE_VOICES` → now `["aditya","shubh"]`. See memory [[avoid-rahul-voice]].
+- 2026-07-12 — **Naturalness pass 1 (A+B+C) shipped:** post-generation **humanizer** subagent (`agents/humanizer.py` + `stages/humanize.py`) — parallel per-turn over a 3-turn window, writes `Turn.spoken` + `Turn.pace` (clean `Turn.text` stays canonical for citations). Does spoken numbers/units ("US$0.50"→"fifty cents"), disfluencies ("So, today, we're gonna…"), spoken punctuation, and per-turn pace (0.9–1.15). Render speaks `spoken` at `pace`; inter-turn gap tightened 0.4→0.2s (`TTS_GAP_SECONDS`). **Lever D (interruptions/mixer) deferred.**
+- 2026-07-12 — **Acronym backstop (deterministic):** the model mangled `mRNA`→"em-en-ary". Fixed by **placeholder-protecting** acronyms in the humanizer (swap → opaque token → restore). Verified: `mRNA`/`DNA` preserved, `COVID-19`→"Covid nineteen". Map in `humanizer._ACRONYMS`.
+- 2026-07-12 — **Expert persona-bleed fix (expert posing the Host's questions):** an Expert `explain` turn ended with a driving audience question ("so how does the immune system remember?") — the Host's job, and it dangled unanswered. Fixed both layers: (1) `EXPERT_SYSTEM` — "you EXPLAIN and ANSWER; do NOT pose the audience's curiosity/driving questions; a brief genuine clarifier is fine"; (2) broadened the **consistency reviewer** to flag the Expert posing a driving question. Reviewer net verified on the synthetic case (flagged hard PERSONA BLEED). **Confirmed clean run:** expert turns ending in a question 0/7 (was 1/8); the panel independently caught + bridged abrupt "FDA"/"EUA" introductions (continuity), grounding 100%.
+- 2026-07-12 — **Transient 403 resilience:** a mid-run `403 invalid_api_key` (after 20+ successful calls, under concurrent-pipeline load) killed a run. Added `403` to `sarvam_llm.TRANSIENT_STATUS` — a genuinely bad key fails on the FIRST call, so a later 403 is a transient auth/abuse hiccup. Operational note: don't run pipelines concurrently.
+- 2026-07-12 — **M2c.1 query planner shipped:** `query_planner` turns topic → 2-5 podcast-evidence query intents (`core_explainer`, `primary_official`, `caveat_critique`, `recent_current`, `example_case`), Exa overfetches per query, URL-dedupes, ranks by query diversity, and persists `query_plan.json`. `Source` now records `query_ids`, `query_intents`, `search_rank`.
+- 2026-07-12 — **M2c.2 source-diverse grounding shipped:** `resolve_settings` now separates planned queries, grounding-source budget, and final facts (depth 3 = 4 queries / 6 grounding sources / 12 facts). `ground._reduce_facts` avoids source starvation: one fact per source, then high-value second-pass facts, then fill. Verified earlier mRNA issue fixed: later sources survive into FactSheet.
+- 2026-07-12 — **M2c.5 fact classification shipped:** `Fact` now carries `fact_type` (`mechanism|finding|stat|caveat|counterclaim|example|misconception|background`) + `story_role` (`explain|illustrate|challenge|context|transition`). Grounder extracts labels inline with old `claims` fallback; reducer prefers high-value fact types; Director `_view` shows `[fact_type/story_role]`.
+- 2026-07-12 — **M2c.6 source quotes shipped:** `Fact.source_quotes` stores up to 2 trimmed supporting excerpts (≤300 chars each). New-style extracted facts without quotes are dropped; old `claims` fallback remains. Director sees the first quote trimmed to ≤220 chars under `evidence: "..."`; speakers still see claim text only. Tests cover quote trimming/filtering, quote-less drop, fallback, and Director display.
+- 2026-07-12 — **Grounding parallelized:** source-level `ThreadPoolExecutor` (`GROUND_MAX_WORKERS=3`) runs `grounder.extract_facts` concurrently while preserving source-order reduce. Per-source failures log `source_error` and do not sink the run unless all sources fail. Chunk-level parallelism intentionally deferred to avoid rate-limit/API pressure.
+- 2026-07-12 — **M2c evidence smoke verified (partial run `20260712-162206`, no dialogue/TTS):** mRNA topic → 4 planned queries; Exa 16 candidates → 16 deduped → 6 grounding sources; parallel grounding 14 LLM calls, 6/6 sources done, 0 source errors; 50 candidate facts → 12 final facts from all 6 sources; every final fact had ≥1 quote; fact types included mechanism/finding/caveat. `annotate_tension` first attempt hit `finish_reason=length`, retry succeeded — possible future prompt/size optimization.
+- 2026-07-12 — **M2c.7 deterministic fact quality scoring shipped + live-smoked (partial run `20260712-164708`, no dialogue/TTS):** mRNA topic → 4 planned queries; Exa 16 candidates → 16 deduped → 6 grounding sources; 36 candidate facts → 12 final facts from all 6 sources; every final fact had ≥1 quote, non-empty `quality_notes`, and a `quality_score`. Fact types: 7 mechanism, 3 caveat, 2 finding. Caveats correctly normalized to `story_role=challenge`. Important calibration finding: all selected facts scored `1.0`, so the deterministic scorer is wired but currently saturates on authoritative/quoted sources; next refinement is score calibration before relying on it as a fine-grained ranker.
+- 2026-07-12 — **M2c.8 evidence-use closure shipped:** calibrated fact scores to avoid `1.0` saturation, changed source coverage reduce to keep each source's best fact, repaired LLM outlines so high-value facts are assigned to segments, added dialogue-side expert focus repair (best unused segment fact; host remains factless), sorted Director views by coverage priority with score labels, and made `verify_turn` quote-aware by including bounded source excerpts in the verifier context. Unit coverage added for score spread, outline repair, focus repair, and quote-aware verification prompt. Backend checks pass: 32 tests.
+- 2026-07-12 — **M2c.8 caveat-heavy tuning:** caveats/counterclaims are no longer globally ranked ahead of mechanisms/findings. Normal narrative priority now starts with mechanism/finding/stat/example; outline repair still guarantees at least one caveat/challenge fact when available, and challenge turns still select caveat/tension facts. Backend checks pass: 35 tests.
+- 2026-07-12 — **M4 render v1 shipped (multilingual):** new `adapters/sarvam_translate.py` (**`mayura:v1`** — modern-colloquial + spoken-form-in-native, covers the 11 Bulbul langs, 1000-char limit; `sarvam-translate:v1` is formal-only) with an **English identity bypass**. `render.py` → **one Episode per language**: English speaks humanized `spoken`, others translate canonical `text`; voices reused across languages (Bulbul speakers are cross-language). CLI `--langs`; additive `Brief.languages`/`Episode.language`. Step-0 verified: translate field=`translated_text`; `aditya`/`priya` render Hindi/Tamil.
+- 2026-07-12 — **M4.1 (parallel + per-language citations):** per-turn translate+TTS parallelized within a language (`RENDER_MAX_WORKERS=4`, order-preserving); `transcript_<lang>.md` carries the translated/spoken delivery **+ `[n]` citations → Sources** (`citations.write_transcript_md(display_texts=…)`, `Episode.deliveries`). Offline smoke test PASSED on existing run output (order preserved under randomized delays; citations render).
+- 2026-07-12 — **M4.1 per-language humanizer shipped:** `humanizer.humanize_lang` runs IN render (after translate) for non-English — adds native-language fillers ("matlab", pauses). **Native-script guard** `_mostly_native`: small models drift Tamil/Hindi to romanized Latin (Bulbul needs native script), so on romanization it falls back to the plain native translation. English keeps its precomputed `spoken`.
+- 2026-07-12 — **M4 v1 + M4.1 CONFIRMED end-to-end (real run, en/hi/ta, `--length short`):** 3 episodes (en 171.5s, hi 184.6s, ta 164.2s); parallel render 0 errors; `humanize_lang` 22 calls / 0 romanization fallbacks; `transcript_hi/ta-IN.md` native-script **with `[n]` citations** and natural spoken fillers ("मतलब,"; Tamil colloquial). **M4 v1 + parallel + per-lang citations + per-lang humanizer DONE.** Only **meaning-preservation subagent** remains (M4.1); timeline mixer = Lever D (deferred).
+- 2026-07-12 — **Meaning-preservation check DEFERRED (come back later).** Design captured in `STATE.md` §9: render-stage check between translate & humanize, scoped to fact-bearing Expert turns; method A = focused bilingual judge (numbers/entities/claim/negation preserved), method B = back-translation fallback; on drift → 1 stricter re-translate → keep-and-flag with a per-language fidelity metric. Not built now.
+- 2026-07-12 — **Angle/focus + tone/style steering shipped:** `Brief`/CLI/API/job runner now carry preset + custom steering. Query planner receives angle/focus and adds specialized source intent pressure (e.g. myth-busting → misconceptions/FAQ/fact-check/official facts; controversy → critique/limitations/safety reviews; current → recent status). Director outline/view/fact priority are angle-aware; dialogue repairs prefer angle-relevant fact types; speaker + humanizer/render prompts receive tone/style. Queued jobs store canonical steering (`myth-busting` → `mythbusting`, `news-analysis` → `news_analysis`). Backend checks pass: 55 tests.
+
+## API learnings (from first live run, 2026-07-11)
+- **Sarvam-105B is a REASONING model.** Even at `reasoning_effort="low"` it emits hidden
+  chain-of-thought into `message.reasoning_content`, and **that reasoning counts against
+  `max_tokens`**. If the budget is too small, `finish_reason="length"` and
+  `message.content` is `None`. Fix: budget generously (default 2500) + auto-retry at 2×.
+  → Implications: (1) every LLM call needs a fat token budget; (2) cost/latency budgets in
+  the harness must account for reasoning tokens (~1.5–2k even at low effort); (3) worth
+  logging `reasoning_content` for debugging. JSON output is clean once the budget is enough.
+- **Bulbul v3:** short text → single element in `.audios` (base64 WAV). Actual sample rate
+  is **22050 Hz** (docs implied 24k) — don't hardcode; read params from the WAV. ~3s latency
+  per short turn. `output_audio_codec="wav"` works; speakers `priya`/`aditya` valid on v3.
+- **Exa:** `search_and_contents(text=True, highlights=True)` fast (~0.5s), `.text`/`.title`
+  populated on the returned paper.
+- **Quality note (not a bug):** with one thin fact and no Director/verification, the Expert
+  *dodged* the question. Validates the need for richer FactSheets + the Director + grounding
+  gate (M1–M3). Small model + thin grounding = evasive filler.
+
+## API learnings (M1, 2026-07-12)
+- **Starter tier caps `max_tokens` at 4096** — exceeding it is a 400 `invalid_request_error`.
+  Clamp all calls to 4096 (`sarvam_llm.TIER_MAX_TOKENS`). With reasoning eating budget, keep
+  per-call generation tasks small so completion fits under 4096.
+- **Sarvam chat gateway (Azure) rejects oversized request bodies** with a generic **403**
+  (HTML, not JSON). A full Exa page can be >100K chars (one was 389K). ~27K worked. Fix:
+  **chunked map-reduce grounding** (`GROUND_CHUNK_CHARS=8000`, `MAX_CHUNKS_PER_SOURCE=3`) —
+  uses the full text across safe requests instead of truncating. All 30 M1 calls → `stop`.
+- **M1 loop cost:** 8-turn episode = 30 LLM calls (12 ground + cast + plan + 16 dialogue) +
+  8 TTS ≈ 3 min, ~85s audio. Per-turn Director = 2 LLM calls/turn as designed.
+- **Observations for later:** dialogue is still Q&A-ish (ask→explain); genuine back-and-forth
+  and variety need the M3 `review_segment` editor; challenge never fires (no tension — M2);
+  outline's opening_hook/closing aren't yet spoken (wire into the loop later).
+
+## Risks (open)
+- Sarvam-105B sustained English debate quality → M1 spike.
+- Bulbul rate limits / concatenation artifacts.
+- Translation style-flattening of persona voice.
