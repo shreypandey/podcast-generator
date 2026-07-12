@@ -10,10 +10,10 @@ Built to beat NotebookLM on four axes:
 - **Real expert debate** — a sharp Host and a deep Expert with evidence-driven tension, not two agreeable narrators.
 - **Verifiable grounding** — every claim cites a fact; every fact cites a source, with the supporting quote shown inline.
 - **Deep steering** — length, depth, angle, focus questions, tone/style, and target languages.
-- **Interactive Q&A** — pause mid-episode and ask ("Join the conversation"). *Deferred to last.*
+- **Interactive Q&A** — pause mid-episode and ask a question ("Join the conversation"). *Deferred to last.*
 
 **Fixed stack:** [Exa](https://exa.ai) (research) · **Sarvam-105B** (generation & reasoning) ·
-**Sarvam-Translate** (localization) · **Sarvam Bulbul** (TTS) · **Sarvam STT** (voice Q&A, later).
+**Sarvam-Translate** (localization) · **Sarvam Bulbul** (TTS).
 
 ---
 
