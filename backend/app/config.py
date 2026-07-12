@@ -31,13 +31,25 @@ FEMALE_VOICES = ["priya", "ritu", "neha"]
 MALE_VOICES = ["aditya", "shubh"]  # NOTE: "rahul" excluded — poor quality (user)
 TTS_PACE = 1.0          # default/fallback pace; humanizer sets per-turn pace (0.9..1.15)
 TTS_GAP_SECONDS = 0.2   # silence between turns in assembly (tightened from 0.4 for naturalness)
+PHRASE_MAX_CHARS = max(80, int(os.getenv("PHRASE_MAX_CHARS", "155")))
+PHRASE_PAUSE_SHORT_MS = max(0, int(os.getenv("PHRASE_PAUSE_SHORT_MS", "120")))
+PHRASE_PAUSE_MEDIUM_MS = max(0, int(os.getenv("PHRASE_PAUSE_MEDIUM_MS", "240")))
+PHRASE_PAUSE_LONG_MS = max(0, int(os.getenv("PHRASE_PAUSE_LONG_MS", "420")))
+HOST_TURN_GAP_MS = max(0, int(os.getenv("HOST_TURN_GAP_MS", "180")))
+EXPERT_TURN_GAP_MS = max(0, int(os.getenv("EXPERT_TURN_GAP_MS", "260")))
+OUTRO_TURN_GAP_MS = max(0, int(os.getenv("OUTRO_TURN_GAP_MS", "520")))
 
 # M4 render — Mayura translate (covers the 11 Bulbul languages; modern-colloquial + spoken form,
 # 1000-char/request limit). sarvam-translate:v1 is formal-only, so Mayura is the better fit.
 TRANSLATE_MODEL = "mayura:v1"
 TRANSLATE_MODE = "modern-colloquial"
 TRANSLATE_SCRIPT = "spoken-form-in-native"
-RENDER_MAX_WORKERS = 4  # M4.1: parallel per-turn translate+TTS within a language
+GROUND_MAX_WORKERS = max(1, int(os.getenv("GROUND_MAX_WORKERS", "5")))
+HUMANIZE_MAX_WORKERS = max(1, int(os.getenv("HUMANIZE_MAX_WORKERS", "10")))
+REVIEW_MAX_WORKERS = max(1, int(os.getenv("REVIEW_MAX_WORKERS", "3")))
+RENDER_MAX_WORKERS = max(1, int(os.getenv("RENDER_MAX_WORKERS", "4")))  # M4.1: parallel per-turn translate+TTS within a language
+PHRASE_RENDER_MAX_WORKERS = max(1, int(os.getenv("PHRASE_RENDER_MAX_WORKERS", "2")))
+TTS_RETRY_TRIES = max(1, int(os.getenv("TTS_RETRY_TRIES", "5")))
 SUPPORTED_LANGUAGES = {
     "en-IN", "hi-IN", "bn-IN", "ta-IN", "te-IN", "mr-IN",
     "gu-IN", "kn-IN", "ml-IN", "pa-IN", "od-IN",
@@ -48,7 +60,6 @@ SUPPORTED_LANGUAGES = {
 # the observed working size (~27K). Chunks/source is bounded so huge pages don't explode cost.
 GROUND_CHUNK_CHARS = 8000
 MAX_CHUNKS_PER_SOURCE = 3
-GROUND_MAX_WORKERS = 3
 # Non-steerable loop constants
 CONTEXT_WINDOW_TURNS = 4
 VERIFY_MAX_REPAIRS = 1  # M2a: bounded repair attempts per unsupported expert turn

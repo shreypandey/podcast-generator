@@ -50,9 +50,22 @@ def with_transient_retry(fn, tries: int = 3):
             raise
         except Exception as e:  # noqa: BLE001 - inspect status to decide retry
             if getattr(e, "status_code", None) in TRANSIENT_STATUS and i < tries - 1:
-                time.sleep(1.5 * (i + 1))
+                time.sleep(_retry_delay_s(e, i))
                 continue
             raise
+
+
+def _retry_delay_s(error: Exception, attempt_index: int) -> float:
+    headers = getattr(error, "headers", {}) or {}
+    retry_after = None
+    for key in ("retry-after", "Retry-After"):
+        if key in headers:
+            retry_after = headers[key]
+            break
+    try:
+        return max(float(retry_after), 1.5 * (attempt_index + 1))
+    except (TypeError, ValueError):
+        return 1.5 * (attempt_index + 1)
 
 
 def complete_json(client, system: str, user: str, run, stage: str,

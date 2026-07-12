@@ -26,6 +26,19 @@ Runtime env vars:
 
 - `DATABASE_PATH` defaults to `./data/app.db`
 - `MAX_CONCURRENT_JOBS` defaults to `1`
+- `GROUND_MAX_WORKERS` defaults to `5`
+- `HUMANIZE_MAX_WORKERS` defaults to `10`
+- `REVIEW_MAX_WORKERS` defaults to `3`
+- `RENDER_MAX_WORKERS` defaults to `4`
+- `PHRASE_RENDER_MAX_WORKERS` defaults to `2`
+- `TTS_RETRY_TRIES` defaults to `5`
+- `PHRASE_MAX_CHARS` defaults to `155`
+- `PHRASE_PAUSE_SHORT_MS` defaults to `120`
+- `PHRASE_PAUSE_MEDIUM_MS` defaults to `240`
+- `PHRASE_PAUSE_LONG_MS` defaults to `420`
+- `HOST_TURN_GAP_MS` defaults to `180`
+- `EXPERT_TURN_GAP_MS` defaults to `260`
+- `OUTRO_TURN_GAP_MS` defaults to `520`
 - `RUNS_DIR` defaults to `./runs`
 - `FRONTEND_DIST_DIR` defaults to `../frontend/dist`
 
@@ -60,10 +73,23 @@ Pipeline runs write artifacts under `RUNS_DIR/<run_id>/`, including:
 - `cast.json`
 - `outline.json`
 - `script.json`
+- `delivery_plan_<lang>.json`
 - `episode_<lang>.json`
 - `episode_<lang>.wav`
 - `transcript_<lang>.md`
 - `manifest.json`
+
+## Audio Delivery
+
+Render uses phrase-level delivery planning. The canonical script remains unchanged; after
+translation/humanization each turn is split into short spoken phrases, each with its own TTS pace
+and pause-after timing. The plan is saved as `delivery_plan_<lang>.json` and copied into
+`episode_<lang>.json` for inspection.
+
+Sarvam Bulbul exposes pace per TTS request, not per word. Phrase pacing therefore sends multiple
+small TTS requests per turn and assembles a phrase timeline. `PHRASE_RENDER_MAX_WORKERS` and
+`TTS_RETRY_TRIES` are intentionally separate from the general render worker count because phrase
+rendering increases request volume and can hit rate limits.
 
 ## Tests
 
@@ -76,4 +102,5 @@ uv run python -m unittest discover -s tests
 - Cancellation is cooperative.
 - SQLite stores run state only; audio and transcripts remain file-based.
 - Increase `MAX_CONCURRENT_JOBS` if you want multiple runs to execute in parallel.
+- Raise `HUMANIZE_MAX_WORKERS` if you want more parallel LLM calls inside one run.
 - The API and UI should talk through `/api/*` only.

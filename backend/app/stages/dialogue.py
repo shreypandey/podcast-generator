@@ -295,6 +295,16 @@ def _intro(client, topic: str, cast: Cast, outline: Outline, run, settings=None)
 
 def _outro(client, cast: Cast, outline: Outline, recent, run, settings=None) -> list[Turn]:
     closing = outline.closing or "wrap up the key takeaway"
+    turns: list[Turn] = []
+    if not recent or recent[-1].speaker != "host":
+        bridge_instr = (
+            f"Bridge from the last point into the ending. Ask expert guest {cast.expert.name} "
+            f"(use exactly that name) for the three things listeners should remember. Keep it "
+            f"short and conversational; do not introduce new facts."
+        )
+        bridge = speaker.framing_turn(client, "host", cast.host, bridge_instr, recent, run, settings)
+        turns.append(Turn(idx=0, speaker="host", text=bridge, move="outro"))
+
     expert_instr = (
         f"Bring the conversation toward a close. If you address the host, call them "
         f"{cast.host.name} (use exactly that name). Give a real listener recap, not a generic "
@@ -302,13 +312,14 @@ def _outro(client, cast: Cast, outline: Outline, recent, run, settings=None) -> 
         f"Second... Third...' Return to the opening listener problem or hook, and avoid new "
         f"technical terms. Note honestly what's still uncertain. Guidance: {closing}"
     )
-    t0 = speaker.framing_turn(client, "expert", cast.expert, expert_instr, recent, run, settings)
+    t0 = speaker.framing_turn(client, "expert", cast.expert, expert_instr,
+                              recent + turns, run, settings)
     host_instr = (
         f"Thank expert guest {cast.expert.name} (use exactly that name) and the listeners. "
         f"End with one soft closing sentence that reinforces the simplest takeaway. Do not "
         f"call the expert a co-host."
     )
-    turns = [Turn(idx=0, speaker="expert", text=t0, move="outro")]
+    turns.append(Turn(idx=0, speaker="expert", text=t0, move="outro"))
     t1 = speaker.framing_turn(client, "host", cast.host, host_instr, recent + turns, run, settings)
     turns.append(Turn(idx=0, speaker="host", text=t1, move="outro"))
     return turns
@@ -356,9 +367,26 @@ def _can_close_segment(seg_turns: int, body_count: int, segment_index: int,
     min_turns = getattr(settings, "min_turns_per_segment", 2)
     if seg_turns < min_turns:
         return False
+    min_total = getattr(settings, "min_total_turns", getattr(settings, "max_total_turns", body_count))
+    if body_count >= min_total:
+        return True
     remaining_segments = max(0, total_segments - segment_index - 1)
     future_capacity = remaining_segments * getattr(settings, "max_turns_per_segment", min_turns)
-    return getattr(settings, "max_total_turns", body_count) - body_count <= future_capacity
+    return min_total - body_count <= future_capacity
+
+
+def _should_stop_body_after_segment(segment_index: int, total_segments: int,
+                                    body_count: int, settings,
+                                    segment_closed: bool) -> bool:
+    if body_count >= getattr(settings, "max_total_turns", body_count):
+        return True
+    min_total = getattr(settings, "min_total_turns", getattr(settings, "max_total_turns", body_count))
+    if body_count < min_total:
+        return False
+    target_total = getattr(settings, "target_total_turns", min_total)
+    if body_count >= target_total:
+        return True
+    return segment_closed and segment_index >= max(0, total_segments - 2)
 
 
 def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, settings, run) -> Script:
@@ -405,6 +433,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
     for segment_index, segment in enumerate(outline.segments):
         seg_start = len(turns)
         seg_turns = 0
+        segment_closed = False
         while seg_turns < settings.max_turns_per_segment and body_count < settings.max_total_turns:
             recent = turns[-config.CONTEXT_WINDOW_TURNS:]
             view = _view(topic, segment, fact_by_id, recent, coverage, recent_beats,
@@ -485,6 +514,7 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
             if beat.segment_status == "close" and _can_close_segment(
                 seg_turns, body_count, segment_index, total_segments, settings
             ):
+                segment_closed = True
                 break
 
         # M3 editor: review the completed segment and revise flagged turns
@@ -496,7 +526,9 @@ def run(client, topic: str, factsheet: FactSheet, cast: Cast, outline: Outline, 
                 if seg_start <= gi < len(turns):
                     _revise(gi, rev)
 
-        if body_count >= settings.max_total_turns:
+        if _should_stop_body_after_segment(
+            segment_index, total_segments, body_count, settings, segment_closed
+        ):
             break
 
     turns += _outro(client, cast, outline, turns[-config.CONTEXT_WINDOW_TURNS:], run, settings)

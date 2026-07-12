@@ -2,10 +2,23 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from app.agents.director import Beat
-from app.artifacts import Fact, Segment, Turn
-from app.stages.dialogue import _can_close_segment, _repair_focus, _repair_speaker_sequence, _view
+from app.artifacts import Cast, Fact, Persona, Segment, Turn
+from app.stages.dialogue import (
+    _can_close_segment,
+    _outro,
+    _repair_focus,
+    _repair_speaker_sequence,
+    _should_stop_body_after_segment,
+    _view,
+)
+
+
+class DummyRun:
+    def log(self, **kw):
+        pass
 
 
 class DialogueViewTests(unittest.TestCase):
@@ -169,16 +182,65 @@ class DialogueViewTests(unittest.TestCase):
     def test_segment_close_preserves_remaining_turn_budget(self):
         settings = SimpleNamespace(
             min_turns_per_segment=4,
+            min_total_turns=14,
+            target_total_turns=18,
             max_turns_per_segment=5,
-            max_total_turns=18,
+            max_total_turns=20,
         )
 
         self.assertTrue(_can_close_segment(4, 4, 0, 4, settings))
         self.assertTrue(_can_close_segment(4, 8, 1, 4, settings))
-        self.assertFalse(_can_close_segment(4, 12, 2, 4, settings))
-        self.assertTrue(_can_close_segment(5, 13, 2, 4, settings))
-        self.assertFalse(_can_close_segment(4, 17, 3, 4, settings))
-        self.assertTrue(_can_close_segment(5, 18, 3, 4, settings))
+        self.assertTrue(_can_close_segment(4, 12, 2, 4, settings))
+        self.assertTrue(_can_close_segment(4, 14, 2, 4, settings))
+        self.assertTrue(_can_close_segment(4, 15, 3, 4, settings))
+
+    def test_body_can_stop_after_minimum_when_segment_closed(self):
+        settings = SimpleNamespace(
+            min_total_turns=14,
+            target_total_turns=18,
+            max_total_turns=20,
+        )
+
+        self.assertFalse(_should_stop_body_after_segment(1, 4, 13, settings, True))
+        self.assertTrue(_should_stop_body_after_segment(2, 4, 14, settings, True))
+        self.assertFalse(_should_stop_body_after_segment(2, 4, 14, settings, False))
+        self.assertTrue(_should_stop_body_after_segment(1, 4, 18, settings, False))
+        self.assertTrue(_should_stop_body_after_segment(0, 4, 20, settings, False))
+
+    def test_outro_bridges_with_host_after_expert_body_turn(self):
+        cast = Cast(
+            host=Persona(role="host", name="Alex", background="host", voice="aditya"),
+            expert=Persona(role="expert", name="Dr. Rao", background="expert", voice="shubh"),
+        )
+        recent = [Turn(idx=0, speaker="expert", text="last expert point", move="explain")]
+        outline = SimpleNamespace(closing="close well")
+
+        with patch(
+            "app.stages.dialogue.speaker.framing_turn",
+            side_effect=["host bridge", "expert recap", "host close"],
+        ) as framing:
+            turns = _outro(object(), cast, outline, recent, DummyRun())
+
+        self.assertEqual([turn.speaker for turn in turns], ["host", "expert", "host"])
+        self.assertEqual([turn.text for turn in turns], ["host bridge", "expert recap", "host close"])
+        self.assertEqual([call.args[1] for call in framing.call_args_list], ["host", "expert", "host"])
+
+    def test_outro_does_not_repeat_host_when_body_already_ended_on_host(self):
+        cast = Cast(
+            host=Persona(role="host", name="Alex", background="host", voice="aditya"),
+            expert=Persona(role="expert", name="Dr. Rao", background="expert", voice="shubh"),
+        )
+        recent = [Turn(idx=0, speaker="host", text="last host bridge", move="react")]
+        outline = SimpleNamespace(closing="close well")
+
+        with patch(
+            "app.stages.dialogue.speaker.framing_turn",
+            side_effect=["expert recap", "host close"],
+        ) as framing:
+            turns = _outro(object(), cast, outline, recent, DummyRun())
+
+        self.assertEqual([turn.speaker for turn in turns], ["expert", "host"])
+        self.assertEqual([call.args[1] for call in framing.call_args_list], ["expert", "host"])
 
 
 if __name__ == "__main__":

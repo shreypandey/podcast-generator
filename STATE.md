@@ -41,7 +41,7 @@ Brief(topic,length,depth,languages,angle/focus,tone/style) → resolve_settings
  → dialogue   intro → per-turn (Director.next_beat → Speaker.generate → verify gate → repair)
               → per-segment REVIEWER PANEL (parallel) → revise flagged turns → outro
  → humanize   parallel per-turn (3-turn window) → adds turn.spoken + turn.pace (delivery-only)
- → render     TTS speaks turn.spoken at turn.pace (concat + 0.2s gap) + transcript.md → Episode
+ → render     phrase delivery plan → per-phrase TTS pace/pauses → wav + transcript.md → Episode
 ```
 
 **Agents (role-conditioned Sarvam calls):** Grounder (extract/annotate/verify), Director
@@ -134,15 +134,25 @@ Every run writes typed artifacts + `manifest.json` (all prompts/responses/latenc
   calibrated quality scoring, Director coverage pressure, quote-aware verification, and parallel
   grounding.
 - **Source diversity** — ✅ research overfetches 2-5 planned query intents, dedupes/ranks, and
-  grounds up to depth-scaled source budgets (depth 3 = 6 grounding sources).
+  grounds up to depth-scaled source budgets (depth 3 = 8 grounding sources; depth 4 = 10;
+  depth 5 = 12).
 - **Steering** — ✅ length/depth + angle/focus + tone/style. Angle affects query planning,
   fallback searches, Director fact priority, outline repair, and dialogue view; tone/style affects
   speaker prompts and the humanizer/render delivery pass.
+- **Podcast pacing / prerequisite learning ladder** — ✅ medium now targets 18 body turns (about
+  22 public turns with intro/outro), short 8, long 28. Each outline segment now carries a
+  `listener_question` and `terms_to_define`, so the Director and Speaker must build prerequisites
+  before mechanisms/evidence/tradeoffs: plain idea first, technical term second. Outline repair
+  pads under-segmented plans, and the dialogue loop blocks early segment closes when they would
+  make the body-turn budget impossible. Live transformer rerun at depth 4 produced 10 sources,
+  22 facts, clean transcript/audio, and 100% verified expert body turns; that run exposed the
+  underfill bug fixed afterward.
 - **Reviewer-panel editor** — ✅ built (continuity/consistency/liveliness, parallel, hard/soft).
 - **Director coherence/bridge nudge** — ✅ built (defense-in-depth with the panel).
 - **Debate/tension** — ✅ evidence-driven challenge, budget-rationed.
-- **Spoken naturalness** — ✅ **A+B+C** via the humanizer (spoken numbers/acronyms, disfluencies,
-  per-turn pace, tighter gaps). **D (interruptions/overlap/mixer/crossfade) deferred** (§9).
+- **Spoken naturalness** — ✅ **A+B+C + phrase pacing** via the humanizer/render delivery pass
+  (spoken numbers/acronyms, disfluencies, per-turn pace, phrase-level pace/pauses).
+  **D (interruptions/overlap/mixer/crossfade/backchannels) deferred** (§9).
 - **TTS realism** — bounded by Bulbul; disfluencies/pace help, won't reach ElevenLabs level.
 
 ## 8. Explorations & open questions
@@ -153,7 +163,7 @@ Every run writes typed artifacts + `manifest.json` (all prompts/responses/latenc
   needs an embedding index, per-turn retrieval latency, verification-against-passages, and loses
   easy *global* conflict detection. *Verdict:* a legitimate evolution but a big change, and **not**
   the current bottleneck (naturalness is) → **parked** as a deliberate exploration. Cheaper middle
-  ground already exists: fact cap is steerable (`--depth 5` = 20 facts); could attach a source
+  ground already exists: fact cap is steerable (`--depth 5` = 28 facts); could attach a source
   quote per fact.
 - **Prompt caching** — not available on Sarvam; reasoning dominates so limited upside; prompts
   kept caching-ready (stable prefix + swapped objective) in case it lands.
@@ -169,8 +179,10 @@ Every run writes typed artifacts + `manifest.json` (all prompts/responses/latenc
      post-generation, parallel per-turn over a 3-turn window; writes `turn.spoken` + `turn.pace`
      (clean `turn.text` canonical). Spoken numbers/units, disfluencies, spoken punctuation, pace
      0.9–1.15; **deterministic acronym backstop** (placeholder-protect: mRNA/DNA preserved,
-     COVID-19→"Covid nineteen"). Inter-turn gap 0.4→0.2s. *Number normalization is model-driven —
-     a `num2words` backstop is a fast-follow if it proves unreliable.*
+    COVID-19→"Covid nineteen"). Render now builds `delivery_plan_<lang>.json`, splits spoken
+    turns into phrase chunks, applies per-phrase pace and pause timing, then assembles the phrase
+    timeline. *Number normalization is model-driven — a `num2words` backstop is a fast-follow if
+    it proves unreliable.*
    - **D (interruptions & overlap) — DEFERRED, come back later.** Needs a cross-turn "delivery"
      pass + a real **timeline mixer** (pydub vs numpy). D1 scripted cut-ins (feasible, no
      timestamps) → D2 ducked backchannels (approximate) → D3 true word-aligned overlap (NOT
@@ -236,14 +248,15 @@ grounding rate 50–80% is a decided limitation, not pending work.
 
 - Models: `LLM_MODEL="sarvam-105b"`, `TTS_MODEL="bulbul:v3"`, `LANGUAGE="en-IN"`.
 - Voices: `FEMALE_VOICES=["priya","ritu","neha"]`, `MALE_VOICES=["aditya","shubh"]` (rahul banned).
-- Grounding: `GROUND_CHUNK_CHARS=8000`, `MAX_CHUNKS_PER_SOURCE=3`, `GROUND_MAX_WORKERS=3`.
+- Grounding: `GROUND_CHUNK_CHARS=8000`, `MAX_CHUNKS_PER_SOURCE=3`, `GROUND_MAX_WORKERS=5`.
 - Loop: `CONTEXT_WINDOW_TURNS=4`, `VERIFY_MAX_REPAIRS=1`, `MAX_CHALLENGES=2`,
   `MAX_SEGMENT_REVISIONS=2`.
-- TTS/naturalness: `TTS_PACE=1.0` default, `TTS_GAP_SECONDS=0.2` (inter-turn); humanizer emits a
-  per-turn `pace` in 0.9–1.15; acronym map in `humanizer._ACRONYMS`.
-- Steering (`resolve_settings`): length {short:6, medium:10, long:16} turns; depth 1–5 →
-  queries {2,3,4,5,5}, grounding sources {3,4,6,7,8}, facts {6,9,12,16,20};
-  segments 2/3/4; turns/segment = ceil(total/segs). Presets: angle
+- TTS/naturalness: `TTS_PACE=1.0` default; humanizer emits a per-turn `pace` in 0.9–1.15.
+  Render builds phrase delivery plans with `PHRASE_MAX_CHARS`, `PHRASE_*_MS`, speaker/outro turn
+  gaps, and `PHRASE_RENDER_MAX_WORKERS=2`; acronym map in `humanizer._ACRONYMS`.
+- Steering (`resolve_settings`): body-turn budgets {short:8, medium:18, long:28}; depth 1–5 →
+  queries {2,3,4,5,5}, grounding sources {4,6,8,10,12}, facts {8,12,16,22,28};
+  segments 3/4 by length, turns/segment = ceil(total/segs), plus minimum segment dwell. Presets: angle
   `{balanced,mechanism,current,controversy,practical,mythbusting,beginner}`, tone
   `{conversational,serious,energetic,calm,investigative}`, style
   `{curious_expert,debate,storytelling,classroom,news_analysis}`; plus ≤5 focus questions and

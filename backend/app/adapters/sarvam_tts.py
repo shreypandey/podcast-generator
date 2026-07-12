@@ -23,7 +23,7 @@ def synth(client, text: str, speaker: str, run, pace: float | None = None,
         model=config.TTS_MODEL,
         pace=pace,
         output_audio_codec="wav",
-    ))
+    ), tries=config.TTS_RETRY_TRIES)
     dt = round(time.time() - t0, 2)
     audios = list(resp.audios or [])
     run.log(stage=stage, kind="tts", speaker=speaker, lang=lang, chars=len(text),
@@ -61,3 +61,33 @@ def combine_to_wav(segments_b64: list[list[str]], out_path: str, gap_s: float | 
         w.setparams(params)
         w.writeframes(b"".join(chunks))
     return out_path
+
+
+def combine_phrase_timeline_to_wav(
+    timeline_b64: list[list[tuple[list[str], int]]],
+    out_path: str,
+) -> str:
+    """Concatenate phrase-level audio chunks with each phrase's own pause."""
+    params = None
+    chunks: list[bytes] = []
+    for turn_phrases in timeline_b64:
+        for phrase_audios, pause_after_ms in turn_phrases:
+            for b64 in phrase_audios:
+                p, frames = _read_wav(b64)
+                if params is None:
+                    params = p
+                chunks.append(frames)
+            if params is not None and pause_after_ms > 0:
+                chunks.append(_silence(params, pause_after_ms / 1000))
+
+    if params is None:
+        raise ValueError("No audio to combine")
+
+    with wave.open(out_path, "wb") as w:
+        w.setparams(params)
+        w.writeframes(b"".join(chunks))
+    return out_path
+
+
+def _silence(params, duration_s: float) -> bytes:
+    return b"\x00" * int(params.framerate * duration_s) * params.sampwidth * params.nchannels

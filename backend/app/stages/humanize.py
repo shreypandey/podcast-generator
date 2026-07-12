@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import concurrent.futures
 
+from app import config
 from app.agents import humanizer
 from app.artifacts import Script
 
@@ -19,7 +20,7 @@ def run(client, script: Script, run, settings=None) -> Script:
 
     if not turns:
         return script
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(turns))) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(config.HUMANIZE_MAX_WORKERS, len(turns))) as ex:
         for fut in concurrent.futures.as_completed([ex.submit(work, i) for i in range(len(turns))]):
             i, (spoken, pace) = fut.result()
             turns[i].spoken = spoken

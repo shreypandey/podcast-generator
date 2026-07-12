@@ -56,7 +56,9 @@ class SteeringConfigTests(unittest.TestCase):
     def test_medium_length_uses_expanded_learning_ladder_budget(self):
         settings = config.resolve_settings(Brief(topic="topic", length="medium"))
 
-        self.assertEqual(settings.max_total_turns, 18)
+        self.assertEqual(settings.min_total_turns, 14)
+        self.assertEqual(settings.target_total_turns, 18)
+        self.assertEqual(settings.max_total_turns, 20)
         self.assertEqual(settings.max_segments, 4)
         self.assertEqual(settings.max_turns_per_segment, 5)
         self.assertEqual(settings.min_turns_per_segment, 4)

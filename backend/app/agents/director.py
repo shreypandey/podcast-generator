@@ -248,9 +248,13 @@ def cast(client, topic: str, factsheet: FactSheet, run) -> Cast:
 # --- Outline -----------------------------------------------------------------
 def _outline_system(settings) -> str:
     steering = config.angle_brief(settings)
+    min_turns = getattr(settings, "min_total_turns", getattr(settings, "max_total_turns", "?"))
+    target_turns = getattr(settings, "target_total_turns", getattr(settings, "max_total_turns", "?"))
+    max_turns = getattr(settings, "max_total_turns", target_turns)
     return (
-        f"You are the director planning a podcast body (~{settings.max_total_turns} body turns, "
-        "plus intro and outro framing, "
+        f"You are the director planning a podcast body ({min_turns}-"
+        f"{max_turns} body turns, target ~{target_turns}, plus "
+        "intro and outro framing, "
         f"depth {settings.depth}/5). Given the TOPIC and FACTS, produce an ordered outline of at "
         f"exactly {settings.max_segments} segments that follows a real listener learning ladder, "
         "not just a longer Q&A. Model prerequisites: before expert terms, mechanisms, metrics, "
@@ -436,7 +440,8 @@ def review_segment(client, segment_turns, cast, topic: str, prior_turns, run) ->
     """Run the reviewer panel IN PARALLEL; aggregate flags (hard first, one per turn)."""
     context = _review_context(cast, topic, prior_turns, segment_turns)
     results: list[dict] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(_REVIEWERS)) as ex:
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(config.REVIEW_MAX_WORKERS, len(_REVIEWERS))) as ex:
         futures = [ex.submit(_run_reviewer, client, context, rv, run) for rv in _REVIEWERS]
         for fut in concurrent.futures.as_completed(futures):
             try:

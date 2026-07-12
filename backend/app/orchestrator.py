@@ -91,7 +91,8 @@ def run_pipeline(topic: str, length: str = "medium", depth: int = 3,
     brief.custom_style = settings.custom_style
     print(f"Run {run.id} — topic: {topic!r} (length={length}, depth={depth} → "
           f"{settings.num_queries} queries, ≤{settings.max_grounding_sources} grounding sources, "
-          f"≤{settings.max_facts} facts, ~{settings.max_total_turns} turns; "
+          f"≤{settings.max_facts} facts, {settings.min_total_turns}-"
+          f"{settings.max_total_turns} body turns target ~{settings.target_total_turns}; "
           f"angle={settings.angle}, tone={settings.tone}, style={settings.style})")
 
     run.save_artifact("brief", brief)

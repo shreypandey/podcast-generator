@@ -2,7 +2,7 @@
 SCRIPT_GENERATION.md schemas (M1 subset: no tension annotation / verification yet)."""
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Brief(BaseModel):
@@ -105,6 +105,24 @@ class Turn(BaseModel):
     pace: float = 1.0      # TTS pace 0.9..1.15 (humanizer, Lever C)
 
 
+class DeliveryPhrase(BaseModel):
+    text: str
+    pace: float = 1.0
+    pause_after_ms: int = 120
+
+
+class TurnDelivery(BaseModel):
+    turn_idx: int
+    speaker: str
+    delivery_text: str = ""
+    phrases: list[DeliveryPhrase] = Field(default_factory=list)
+
+
+class DeliveryPlan(BaseModel):
+    language: str = "en-IN"
+    turns: list[TurnDelivery] = Field(default_factory=list)
+
+
 class Script(BaseModel):
     turns: list[Turn]
 
@@ -114,4 +132,5 @@ class Episode(BaseModel):
     audio_path: str
     transcript: list[Turn]
     deliveries: list[str] = []  # per-turn spoken/translated delivery text (for the transcript)
+    delivery_plan: list[TurnDelivery] = Field(default_factory=list)
     sources: list[Source] = []  # sources cited across the episode
