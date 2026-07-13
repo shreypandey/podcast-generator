@@ -32,6 +32,8 @@ def _extract_json(text: str) -> dict:
 # NOTE: starter tier hard-caps max_tokens at 4096 — exceeding it is a 400 error.
 TIER_MAX_TOKENS = 4096
 DEFAULT_MAX_TOKENS = 4096
+LENGTH_RETRIES = 5
+LOW_REASONING_LENGTH_RETRIES = 3
 
 # Transient failures shouldn't kill a ~30-call run. Retry on rate-limit / server errors, and on
 # 403: a genuinely bad key fails on the first call, so a 403 after many successes is a transient
@@ -76,15 +78,21 @@ def complete_json(client, system: str, user: str, run, stage: str,
         {"role": "user", "content": user},
     ]
 
+    def _reasoning_effort(attempt: int):
+        # Keep the first attempt plus three truncation retries at low reasoning. If
+        # those still exhaust the token budget, disable reasoning completely.
+        return None if attempt > LOW_REASONING_LENGTH_RETRIES + 1 else "low"
+
     def _call(mt: int, attempt: int) -> tuple[str, str]:
         mt = min(mt, TIER_MAX_TOKENS)  # never exceed the tier ceiling (400 otherwise)
+        reasoning_effort = _reasoning_effort(attempt)
         t0 = time.time()
         resp = with_transient_retry(lambda: client.chat.completions(
             messages=messages,
             model=config.LLM_MODEL,
             temperature=temperature,
             max_tokens=mt,
-            reasoning_effort="low",
+            reasoning_effort=reasoning_effort,
         ))
         dt = round(time.time() - t0, 2)
         choice = resp.choices[0]
@@ -95,20 +103,23 @@ def complete_json(client, system: str, user: str, run, stage: str,
         except Exception:
             usage = str(getattr(resp, "usage", None))
         run.log(stage=stage, kind="llm", model=config.LLM_MODEL, attempt=attempt,
+                reasoning_effort=reasoning_effort,
                 max_tokens=mt, finish_reason=finish, user=user[:800],
                 response=content[:2000], latency_s=dt, usage=usage)
         return content, finish
 
     content, finish = _call(max_tokens, attempt=1)
-    # Repair: reasoning ate the budget (truncated / empty) -> retry once at the ceiling
-    # (reasoning length varies run to run, so a second shot often lands).
-    if finish == "length" or not content.strip():
-        content, finish = _call(TIER_MAX_TOKENS, attempt=2)
+    # Repair: reasoning ate the budget (truncated / empty) -> retry at the tier ceiling.
+    # Reasoning length varies run to run, so fresh attempts often land even with the same cap.
+    for attempt in range(2, LENGTH_RETRIES + 2):
+        if finish != "length" and content.strip():
+            break
+        content, finish = _call(TIER_MAX_TOKENS, attempt=attempt)
 
     if not content.strip():
         raise ValueError(
             f"LLM returned empty content (finish_reason={finish}); reasoning likely "
-            f"exceeded max_tokens even after retry."
+            f"exceeded max_tokens even after {LENGTH_RETRIES} retries."
         )
     try:
         return _extract_json(content)
