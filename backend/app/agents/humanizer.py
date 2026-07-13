@@ -50,8 +50,9 @@ SYSTEM = (
     "('so', 'right', 'you know', an occasional 'um') — only where natural, do NOT overdo it. "
     "Keep any placeholder token that looks like ACRTKN followed by digits EXACTLY as it appears — "
     "do not translate, spell out, or remove it. Do NOT change any facts, numeric values, or "
-    "names — only HOW they are said. Also choose a delivery pace from 0.9 (slow / emphatic) to "
-    '1.15 (quick / excited). Respond with ONLY JSON: {"spoken": "<spoken final turn>", "pace": 1.0}.'
+    f"names — only HOW they are said. Also choose a delivery pace from {config.PACE_MIN} "
+    f"(measured / emphatic) to {config.PACE_MAX} (quick / excited). "
+    'Respond with ONLY JSON: {"spoken": "<spoken final turn>", "pace": 1.0}.'
 )
 
 
@@ -80,7 +81,7 @@ def humanize_turn(client, window_turns, run, settings=None) -> tuple[str, float]
             pace = float(data.get("pace", 1.0))
         except (TypeError, ValueError):
             pace = 1.0
-        return spoken, max(0.9, min(1.15, pace))
+        return spoken, _clamp_pace(pace)
     except Exception as e:  # noqa: BLE001 - delivery is best-effort; never worse than clean text
         run.log(stage="humanize", kind="fallback", error=str(e)[:150])
         return target.text, 1.0
@@ -117,7 +118,7 @@ def humanize_lang(client, text: str, lang: str, run, settings=None) -> tuple[str
         "'haan'), and natural spoken pauses (commas, ellipses, em-dashes). Do NOT change any "
         f"facts, numbers, or names — only how it is said. Keep the output ENTIRELY in the native "
         f"{language} script — do NOT romanize or use Latin letters. Also choose a delivery pace "
-        'from 0.9 (slow) to 1.15 (quick). '
+        f"from {config.PACE_MIN} (measured) to {config.PACE_MAX} (quick). "
         + (f"STYLE GUIDE:\n{config.style_brief(settings)} " if settings else "")
         + 'Respond with ONLY JSON: {"spoken": "...", "pace": 1.0}.'
     )
@@ -132,7 +133,11 @@ def humanize_lang(client, text: str, lang: str, run, settings=None) -> tuple[str
             pace = float(data.get("pace", 1.0))
         except (TypeError, ValueError):
             pace = 1.0
-        return spoken, max(0.9, min(1.15, pace))
+        return spoken, _clamp_pace(pace)
     except Exception as e:  # noqa: BLE001 - never worse than the plain translation
         run.log(stage="humanize_lang", kind="fallback", error=str(e)[:150])
         return text, 1.0
+
+
+def _clamp_pace(pace: float) -> float:
+    return max(config.PACE_MIN, min(config.PACE_MAX, pace))

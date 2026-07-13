@@ -44,14 +44,23 @@ class SteeringConfigTests(unittest.TestCase):
         self.assertEqual(settings.tone, "conversational")
         self.assertEqual(settings.style, "curious_expert")
 
-    def test_depth_four_and_five_use_larger_source_budgets(self):
+    def test_depth_three_uses_previous_max_source_budget(self):
+        d3 = config.resolve_settings(Brief(topic="topic", depth=3))
+
+        self.assertEqual(d3.num_queries, 5)
+        self.assertEqual(d3.max_grounding_sources, 12)
+        self.assertEqual(d3.max_facts, 28)
+
+    def test_depth_four_and_five_extend_source_budgets(self):
         d4 = config.resolve_settings(Brief(topic="topic", depth=4))
         d5 = config.resolve_settings(Brief(topic="topic", depth=5))
 
-        self.assertEqual(d4.max_grounding_sources, 10)
-        self.assertEqual(d4.max_facts, 22)
-        self.assertEqual(d5.max_grounding_sources, 12)
-        self.assertEqual(d5.max_facts, 28)
+        self.assertEqual(d4.num_queries, 6)
+        self.assertEqual(d4.max_grounding_sources, 16)
+        self.assertEqual(d4.max_facts, 38)
+        self.assertEqual(d5.num_queries, 7)
+        self.assertEqual(d5.max_grounding_sources, 20)
+        self.assertEqual(d5.max_facts, 48)
 
     def test_medium_length_uses_expanded_learning_ladder_budget(self):
         settings = config.resolve_settings(Brief(topic="topic", length="medium"))

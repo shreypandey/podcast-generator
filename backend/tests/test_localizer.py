@@ -42,7 +42,7 @@ class LocalizerTests(unittest.TestCase):
         self.assertIn("Dr. Ben Carter", user)
         self.assertIn("FINAL ENGLISH TURN TO LOCALIZE:", user)
         self.assertIn("बुनियाद", spoken)
-        self.assertEqual(pace, 0.96)
+        self.assertEqual(pace, 1.0)
 
     def test_rejects_romanized_output(self):
         turn = Turn(idx=0, speaker="host", text="What is an mRNA vaccine?", move="ask")

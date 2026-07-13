@@ -36,7 +36,7 @@ class DeliveryPlannerTests(unittest.TestCase):
         self.assertGreater(len(plan.phrases), 1)
         self.assertEqual(plan.delivery_text, text)
         self.assertTrue(all(phrase.text for phrase in plan.phrases))
-        self.assertLessEqual(plan.phrases[0].pace, 0.94)
+        self.assertEqual(plan.phrases[0].pace, 1.0)
         self.assertGreaterEqual(plan.phrases[0].pause_after_ms, 400)
 
     def test_host_question_is_slightly_quicker_than_expert_definition(self):
@@ -53,6 +53,14 @@ class DeliveryPlannerTests(unittest.TestCase):
         expert_plan = delivery.plan_turn_delivery(expert, expert.text, 1.0)
 
         self.assertGreater(host_plan.phrases[0].pace, expert_plan.phrases[0].pace)
+
+    def test_phrase_pace_clamps_to_scaled_bounds(self):
+        turn = Turn(idx=0, speaker="expert", text="Dense technical wording.", move="explain", pace=0.8)
+        low = delivery.plan_turn_delivery(turn, turn.text, 0.8)
+        high = delivery.plan_turn_delivery(turn, turn.text, 1.4)
+
+        self.assertEqual(low.phrases[0].pace, 1.0)
+        self.assertLessEqual(high.phrases[0].pace, 1.25)
 
 
 class PhraseRenderTests(unittest.TestCase):

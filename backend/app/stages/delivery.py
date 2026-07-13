@@ -206,4 +206,4 @@ def _clamp_pace(pace: float | None) -> float:
         value = float(pace if pace is not None else config.TTS_PACE)
     except (TypeError, ValueError):
         value = config.TTS_PACE
-    return round(max(0.9, min(1.15, value)), 2)
+    return round(max(config.PACE_MIN, min(config.PACE_MAX, value)), 2)

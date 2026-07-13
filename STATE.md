@@ -178,7 +178,7 @@ Every run writes typed artifacts + `manifest.json` (all prompts/responses/latenc
    - **A+B+C ✅** — **humanizer subagent** (`agents/humanizer.py`, `stages/humanize.py`):
      post-generation, parallel per-turn over a 3-turn window; writes `turn.spoken` + `turn.pace`
      (clean `turn.text` canonical). Spoken numbers/units, disfluencies, spoken punctuation, pace
-     0.9–1.15; **deterministic acronym backstop** (placeholder-protect: mRNA/DNA preserved,
+     1.0–1.25; **deterministic acronym backstop** (placeholder-protect: mRNA/DNA preserved,
     COVID-19→"Covid nineteen"). Render now builds `delivery_plan_<lang>.json`, splits spoken
     turns into phrase chunks, applies per-phrase pace and pause timing, then assembles the phrase
     timeline. *Number normalization is model-driven — a `num2words` backstop is a fast-follow if
@@ -253,7 +253,7 @@ grounding rate 50–80% is a decided limitation, not pending work.
 - Grounding: `GROUND_CHUNK_CHARS=8000`, `MAX_CHUNKS_PER_SOURCE=3`, `GROUND_MAX_WORKERS=5`.
 - Loop: `CONTEXT_WINDOW_TURNS=4`, `VERIFY_MAX_REPAIRS=1`, `MAX_CHALLENGES=2`,
   `MAX_SEGMENT_REVISIONS=2`.
-- TTS/naturalness: `TTS_PACE=1.0` default; humanizer emits a per-turn `pace` in 0.9–1.15.
+- TTS/naturalness: `TTS_PACE=1.0` default; humanizer emits a per-turn `pace` in 1.0–1.25.
   Render builds phrase delivery plans with `PHRASE_MAX_CHARS`, `PHRASE_*_MS`, speaker/outro turn
   gaps, and `PHRASE_RENDER_MAX_WORKERS=2`; acronym map in `humanizer._ACRONYMS`.
 - Localization: `LOCALIZATION_MODE=translate` (default Mayura+humanizer) or `llm`

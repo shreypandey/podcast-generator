@@ -102,7 +102,7 @@ class Turn(BaseModel):
     cited_fact_ids: list[str] = []
     verified: bool = True  # set by the M2a grounding gate (expert turns only)
     spoken: str = ""       # humanized delivery text used for TTS (falls back to text)
-    pace: float = 1.0      # TTS pace 0.9..1.15 (humanizer, Lever C)
+    pace: float = 1.0      # TTS pace 1.0..1.25 (humanizer, Lever C)
 
 
 class DeliveryPhrase(BaseModel):

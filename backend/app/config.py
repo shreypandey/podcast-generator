@@ -29,7 +29,9 @@ LANGUAGE = "en-IN"
 # so the voice matches the character's name/gender (no "Alex" with a female voice).
 FEMALE_VOICES = ["priya", "ritu", "neha"]
 MALE_VOICES = ["aditya", "shubh"]  # NOTE: "rahul" excluded — poor quality (user)
-TTS_PACE = 1.0          # default/fallback pace; humanizer sets per-turn pace (0.9..1.15)
+TTS_PACE = 1.0          # default/fallback pace
+PACE_MIN = 1.0
+PACE_MAX = 1.25
 TTS_GAP_SECONDS = 0.2   # silence between turns in assembly (tightened from 0.4 for naturalness)
 PHRASE_MAX_CHARS = max(80, int(os.getenv("PHRASE_MAX_CHARS", "155")))
 PHRASE_PAUSE_SHORT_MS = max(0, int(os.getenv("PHRASE_PAUSE_SHORT_MS", "120")))
@@ -123,9 +125,9 @@ _LENGTH_TURN_RANGES = {
     "medium": (14, 18, 20),
     "long": (22, 28, 32),
 }
-_DEPTH_QUERIES = {1: 2, 2: 3, 3: 4, 4: 5, 5: 5}
-_DEPTH_GROUNDING_SOURCES = {1: 4, 2: 6, 3: 8, 4: 10, 5: 12}
-_DEPTH_FACTS = {1: 8, 2: 12, 3: 16, 4: 22, 5: 28}
+_DEPTH_QUERIES = {1: 2, 2: 4, 3: 5, 4: 6, 5: 7}
+_DEPTH_GROUNDING_SOURCES = {1: 4, 2: 8, 3: 12, 4: 16, 5: 20}
+_DEPTH_FACTS = {1: 8, 2: 18, 3: 28, 4: 38, 5: 48}
 
 
 def _clean_text(value: str, limit: int) -> str:

@@ -101,7 +101,7 @@ def localize_turn(client, target: Turn, prior_turns: list[Turn], target_lang: st
         pace = float(data.get("pace", 1.0))
     except (TypeError, ValueError):
         pace = 1.0
-    return spoken, max(0.9, min(1.15, pace))
+    return spoken, max(config.PACE_MIN, min(config.PACE_MAX, pace))
 
 
 def _prompt(target: Turn, prior_turns: list[Turn], target_lang: str, language: str,
